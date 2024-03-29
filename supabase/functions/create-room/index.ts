@@ -4,38 +4,9 @@ import { client } from "../utils/client.ts";
 // import { corsHeaders } from "../_shared/cors.ts";
 import { myHeaders } from "../utils/100ms/my-headers.ts";
 // import { handleCORS } from "../_shared/handleCORS.ts";
-// import {
-//   create,
-//   getNumericDate,
-//   Header,
-//   Payload,
-// } from "https://deno.land/x/djwt/mod.ts";
-
-// const access_key = Deno.env.get("APP_ACCESS_KEY");
-// const app_secret = Deno.env.get("APP_SECRET");
-
-// const payload: Payload = {
-//   access_key: access_key,
-//   type: "management",
-//   version: 2,
-//   iat: getNumericDate(Math.floor(Date.now() / 1000)),
-//   nbf: getNumericDate(Math.floor(Date.now() / 1000)),
-//   exp: getNumericDate(60 * 60 * 24), // 24 hours from now
-// };
-
-// const header: Header = {
-//   alg: "HS256",
-//   typ: "JWT",
-// };
-
-// // Преобразование app_secret в CryptoKey
-// const cryptoKey = await crypto.subtle.importKey(
-//   "raw",
-//   new TextEncoder().encode(app_secret),
-//   { name: "HMAC", hash: { name: "SHA-256" } },
-//   false,
-//   ["sign"],
-// );
+if (!Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")) {
+  throw new Error("NEXT_PUBLIC_FUNCTION_SECRET is not set");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -55,7 +26,10 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
+    if (
+      url.searchParams.get("secret") !==
+        Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")
+    ) {
       return new Response("Not allowed", {
         status: 405,
         headers: { ...headers },
@@ -74,7 +48,7 @@ Deno.serve(async (req) => {
     }
 
     const user_id = data[0].user_id;
-
+    console.log(user_id, "user_id");
     const createOrFetchRoom = async () => {
       const roomData = {
         name,
