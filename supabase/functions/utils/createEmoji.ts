@@ -3,9 +3,11 @@ import OpenAI from "https://deno.land/x/openai@v4.28.0/mod.ts";
 const apiKey = Deno.env.get("OPENAI_API_KEY");
 const openai = new OpenAI({ apiKey });
 
-export async function createChatCompletion(
+const systemPrompt =
+  `create a very short title with an emoji at the beginning of this text`;
+
+export async function createEmoji(
   prompt: string,
-  systemPrompt = "",
 ) {
   const chatCompletion = await openai.chat.completions.create({
     messages: [{
@@ -15,10 +17,9 @@ export async function createChatCompletion(
       role: "system",
       content: systemPrompt,
     }],
-    model: "gpt-4-1106-preview",
+    model: "gpt-3.5-turbo-1106",
     stream: false,
     temperature: 0.1,
-    response_format: { type: "json_object" },
   });
 
   return chatCompletion.choices[0].message.content;

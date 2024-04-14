@@ -1,4 +1,4 @@
-import { corsHeaders } from "./cors.ts";
+import { corsHeaders } from "./corsHeaders.ts";
 
 export const handleCORS = (cb: (req: Request) => Promise<Response>) => {
   return async (req: Request) => {

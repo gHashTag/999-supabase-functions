@@ -1,7 +1,8 @@
 import { createCodes } from "../utils/100ms/create-codes.ts";
-import { headers } from "../utils/100ms/headers.ts";
+import { corsHeaders } from "../_shared/corsHeaders.ts";
 import { client } from "../utils/client.ts";
 // import { corsHeaders } from "../_shared/cors.ts";
+import { headers } from "../_shared/headers.ts";
 import { myHeaders } from "../utils/100ms/my-headers.ts";
 // import { handleCORS } from "../_shared/handleCORS.ts";
 if (!Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")) {
@@ -10,7 +11,7 @@ if (!Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: { ...headers } });
+    return new Response("ok", { headers: { ...corsHeaders, ...headers } });
   }
   // let token;
   // try {
@@ -25,16 +26,16 @@ Deno.serve(async (req) => {
   const supabaseClient = client();
 
   try {
-    const url = new URL(req.url);
-    if (
-      url.searchParams.get("secret") !==
-        Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")
-    ) {
-      return new Response("Not allowed", {
-        status: 405,
-        headers: { ...headers },
-      });
-    }
+    // const url = new URL(req.url);
+    // if (
+    //   url.searchParams.get("secret") !==
+    //     Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")
+    // ) {
+    //   return new Response("Not allowed", {
+    //     status: 405,
+    //     headers: { ...headers, ...corsHeaders },
+    //   });
+    // }
 
     const { name, type, email } = await req.json();
 
@@ -97,13 +98,13 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify(rooms), {
       status: 200,
-      headers: { ...headers },
+      headers: { ...headers, ...corsHeaders },
     });
   } catch (error) {
     console.log("error", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
-      headers: { ...headers },
+      headers: { ...headers, ...corsHeaders },
     });
   }
 });
