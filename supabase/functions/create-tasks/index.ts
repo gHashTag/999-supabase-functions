@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
           const newTasks = tasksArray.map((task: any) => {
             // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
             if (!task.assignee.user_id) {
-              task.assignee.user_id = "d685d450-9759-4cd2-96cb-f1dc132d3078";
+              task.assignee.user_id = "28772cec-eba4-4375-a5a1-090bba2909fa";
             }
             return task;
           });
