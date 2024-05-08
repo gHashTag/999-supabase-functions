@@ -2,3 +2,8 @@
 .env*.local
 supabase/functions/.env
 .env
+
+# trash
+supabase/.DS_Store
+.DS_Store
+supabase/functions/javascript-dev/.DS_Store
