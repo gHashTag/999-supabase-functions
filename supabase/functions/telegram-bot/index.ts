@@ -6,8 +6,6 @@ import { client } from "../utils/client.ts";
 import { bot } from "../utils/telegram/bot.ts";
 import { webhookCallback } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-console.log("Hello from Functions!");
-
 const handleUpdate = webhookCallback(bot, "std/http");
 
 Deno.serve(async (req) => {
