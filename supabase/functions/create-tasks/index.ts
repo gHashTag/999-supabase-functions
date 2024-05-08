@@ -31,7 +31,9 @@ async function sendTasksToTelegram(
   const newTasks = tasks.map((task) => {
     const assignee = task.assignee.username === null
       ? ""
-      : `${task.assignee.first_name} ${task.assignee.last_name} (@${task.assignee.username})`;
+      : `${task.assignee.first_name} ${
+        task.assignee.last_name || ""
+      } (@${task.assignee.username})`;
 
     return {
       title: task.title,
@@ -101,7 +103,6 @@ Deno.serve(async (req) => {
   }
 
   const { type, data } = await req.json();
-  console.log(type, "type");
 
   try {
     const supabaseClient = client();
@@ -160,7 +161,6 @@ Deno.serve(async (req) => {
         const titleWithEmoji = await createEmoji(
           summary_short,
         );
-        console.log(titleWithEmoji, "titleWithEmoji");
 
         const roomAsset = {
           ...data,
@@ -186,12 +186,14 @@ Deno.serve(async (req) => {
           transcription,
           systemPrompt,
         );
-        console.log("preparedTasks", preparedTasks);
 
-        const { data: users } = await supabaseClient.from("users").select("*");
+        const { data: users } = await supabaseClient.from("user_passport")
+          .select("*").eq("room_id", data.room_id);
+        console.log(users, "users");
 
         const preparedUsers = getPreparedUsers(users);
-        // console.log(preparedUsers, "preparedUsers");
+        console.log(preparedUsers, "preparedUsers");
+
         const prompt = `add the 'user_id' from of ${
           JSON.stringify(
             preparedUsers,
@@ -228,7 +230,7 @@ Deno.serve(async (req) => {
             .from("rooms")
             .select("*")
             .eq("room_id", data.room_id)) as { data: Data[]; error: any };
-          console.log(roomData, "roomData");
+
           const { lang, chat_id, token, description } = roomData[0];
 
           const workspace_id = description;
