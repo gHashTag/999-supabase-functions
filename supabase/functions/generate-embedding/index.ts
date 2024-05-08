@@ -2,14 +2,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.42.0";
 import { Database, Tables } from "../_shared/database.types.ts";
-// import OpenAI from "https://deno.land/x/openai@v4.28.0/mod.ts";
-
-// if (!Deno.env.get("OPENAI_API_KEY")) {
-//   throw new Error("OPENAI_API_KEY is not set");
-// }
-
-// const apiKey = Deno.env.get("OPENAI_API_KEY");
-// const openai = new OpenAI({ apiKey });
 
 type EmbeddingsRecord = Tables<"embeddings">;
 interface WebhookPayload {
@@ -26,24 +18,17 @@ const supabase = createClient<Database>(
 );
 
 const model = new Supabase.ai.Session("gte-small");
-// console.log(model, "model");
 
 Deno.serve(async (req) => {
   const payload: WebhookPayload = await req.json();
   const { content, id } = payload.record;
-  console.log(payload, "payload");
+
   // Check if content has changed.
   if (content === payload?.old_record?.content) {
     return new Response("ok - no change");
   }
-  // const {
-  //   data: [{ embedding }],
-  // } = await openai.embeddings.create({
-  //   model: "text-embedding-3-large",
-  //   input: content,
-  //   dimensions: 384,
-  // });
-  // // Generate embedding
+
+  // Generate embedding
   const embedding = await model.run(content, {
     mean_pool: true,
     normalize: true,
