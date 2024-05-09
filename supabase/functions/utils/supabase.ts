@@ -1,4 +1,5 @@
-import { client } from "./client.ts"
+import C from "https://esm.sh/v135/bufferutil@4.0.8/denonext/bufferutil.mjs";
+import { client } from "./client.ts";
 
 interface QuestionContext {
   lesson_number?: number;
@@ -8,7 +9,7 @@ interface QuestionContext {
 interface updateProgressContext {
   user_id: string;
   isTrue: boolean;
-  language: string
+  language: string;
 }
 
 interface UpdateResultParams {
@@ -17,35 +18,58 @@ interface UpdateResultParams {
   value: boolean;
 }
 
-interface getBiggestT{
-  lesson_number: number
-  language: string
+interface getBiggestT {
+  lesson_number: number;
+  language: string;
 }
 
-interface getQuestionT{
-  ctx: QuestionContext
-  language:string
+interface getQuestionT {
+  ctx: QuestionContext;
+  language: string;
 }
 
-interface resetProgressT{
-  username: string
-  language: string
+interface resetProgressT {
+  username: string;
+  language: string;
 }
 
-interface getCorrectsT{
-  user_id: string
-  language: string
+interface getCorrectsT {
+  user_id: string;
+  language: string;
+}
+export type SupabaseUser = TUser & {
+  inviter?: string | null;
+  is_bot?: boolean | null;
+  language_code?: string | null;
+  telegram_id?: number | null;
+  email?: string | null;
+  created_at?: Date;
+  user_id?: string;
+  aggregateverifier?: string | null;
+  admin_email?: string | null;
+  role?: string | null;
+  display_name?: string | null;
+};
+
+export type TUser = Readonly<{
+  auth_date?: number;
+  first_name: string;
+  last_name?: string;
+  hash?: string;
+  id?: number;
+  photo_url?: string;
+  username?: string;
+}>;
+
+if (!Deno.env.get("SUPABASE_URL")) {
+  throw new Error("SUPABASE_URL is not set");
 }
 
-if (!Deno.env.get("NEXT_PUBLIC_SUPABASE_URL")) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
+if (!Deno.env.get("SUPABASE_ANON_KEY")) {
+  throw new Error("SUPABASE_ANON_KEY is not set");
 }
 
-if (!Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not set");
-}
-
-const supabase = client()
+const supabase = client();
 
 export async function getWorkspaceById(workspace_id: string) {
   const { data, error } = await supabase
@@ -69,7 +93,7 @@ export async function setMyWorkspace(user_id: string) {
   const { data, error } = await supabase.from("workspaces").insert([
     {
       title: "Fire",
-      user_id: user_id,
+      user_id,
     },
   ]);
   console.log(error, "setMyWorkspace error:::");
@@ -93,7 +117,7 @@ export async function createUser(ctx: any) {
   }
 
   if (existingUser) {
-    return
+    return;
   }
   // Если пользователя нет, создаем нового
   const usersData = {
@@ -119,14 +143,14 @@ export async function createUser(ctx: any) {
   return data;
 }
 
-export async function createRoom (username: string) {
+export async function createRoom(username: string) {
   const { data, error } = await supabase
     .from("rooms")
     .select("*")
     .eq("username", username);
 
   return data;
-};
+}
 
 export const getSelectIzbushkaId = async (selectIzbushka: string) => {
   const { data: selectIzbushkaData, error: selectIzbushkaError } =
@@ -134,8 +158,9 @@ export const getSelectIzbushkaId = async (selectIzbushka: string) => {
   return { selectIzbushkaData, selectIzbushkaError };
 };
 
-export async function getBiggest({lesson_number, language}: getBiggestT): Promise<number | null> {
-
+export async function getBiggest(
+  { lesson_number, language }: getBiggestT,
+): Promise<number | null> {
   const { data, error } = await supabase
     .from(language)
     .select("subtopic")
@@ -151,8 +176,8 @@ export async function getBiggest({lesson_number, language}: getBiggestT): Promis
   return result;
 }
 
-export async function getQuestion({ctx, language}: getQuestionT) {
-  console.log(ctx)
+export async function getQuestion({ ctx, language }: getQuestionT) {
+  console.log(ctx);
   // Проверяем, предоставлены ли lesson_number и subtopic
   if (ctx.lesson_number == null || ctx.subtopic == null) {
     console.error("getQuestion требует lesson_number и subtopic");
@@ -168,7 +193,7 @@ export async function getQuestion({ctx, language}: getQuestionT) {
     .eq("subtopic", subtopic);
 
   if (error) {
-    console.log(error, "error supabase getQuestion")
+    console.log(error, "error supabase getQuestion");
     throw new Error(error.message);
   }
 
@@ -176,7 +201,7 @@ export async function getQuestion({ctx, language}: getQuestionT) {
 }
 
 export async function resetProgress(
-  {username, language}: resetProgressT
+  { username, language }: resetProgressT,
 ): Promise<void> {
   // Получаем user_id по username из таблицы users
   const { data: userData, error: userError } = await supabase
@@ -219,30 +244,69 @@ export async function resetProgress(
   }
 }
 
-export async function getCorrects({user_id,language}: getCorrectsT): Promise<number> {
-if (user_id !== undefined){
-  // Запрос к базе данных для получения данных пользователя
-  const { data, error } = await supabase
-    .from("progress")
-    .select("*")
-    .eq("user_id", user_id)
-    .single();
- 
-  if (error) {
-    console.error("Error fetching data:", error);
-    throw new Error(error.message);
-  }
+export const getSupabaseUser = async (username: string) => {
+  try {
+    const response = await supabase
+      .from("users")
+      .select("*")
+      .eq("username", username)
+      .single();
 
-  if (!data) {
-    throw new Error("User not found");
-  }
-  // Подсчет количества true значений
-  const correctAnswers = data[language]
+    if (response.error && response.error.code === "PGRST116") {
+      console.error("getSupabaseUser: Пользователь не найден");
+      return null;
+    }
 
-  return correctAnswers; 
-} else {
-    console.error('user_id Type is undefined')
-    return 0
+    if (response.error) {
+      console.error(
+        "Ошибка при получении информации о пользователе:",
+        response.error,
+      );
+      return null;
+    }
+
+    return response.data;
+  } catch (error) {
+    // console.error("Ошибка при получении информации о пользователе:", error);
+    return null;
+  }
+};
+
+export const createUserInDatabase = async (
+  newUser: SupabaseUser,
+): Promise<{ user_id: string }> => {
+  await supabase.from("users").insert([newUser]);
+  const user = await getSupabaseUser(newUser.username || "");
+  console.log(user, "user");
+  return user;
+};
+
+export async function getCorrects(
+  { user_id, language }: getCorrectsT,
+): Promise<number> {
+  if (user_id !== undefined) {
+    // Запрос к базе данных для получения данных пользователя
+    const { data, error } = await supabase
+      .from("progress")
+      .select("*")
+      .eq("user_id", user_id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching data:", error);
+      throw new Error(error.message);
+    }
+
+    if (!data) {
+      throw new Error("User not found");
+    }
+    // Подсчет количества true значений
+    const correctAnswers = data[language];
+
+    return correctAnswers;
+  } else {
+    console.error("user_id Type is undefined");
+    return 0;
   }
 }
 
@@ -265,16 +329,20 @@ export async function updateProgress(
   } else {
     const { error: updateError } = await supabase
       .from("progress")
-      .update({ [language]: isTrue ? progressData[0][language]+1 : progressData[0][language]})
+      .update({
+        [language]: isTrue
+          ? progressData[0][language] + 1
+          : progressData[0][language],
+      })
       .eq("user_id", user_id);
 
-        const { error: allError } = await supabase
+    const { error: allError } = await supabase
       .from("progress")
-      .update({ all: isTrue ? progressData[0].all+1 : progressData[0].all})
+      .update({ all: isTrue ? progressData[0].all + 1 : progressData[0].all })
       .eq("user_id", user_id);
 
-    if (updateError ) throw new Error(updateError.message);
-    if (allError ) throw new Error(allError.message)
+    if (updateError) throw new Error(updateError.message);
+    if (allError) throw new Error(allError.message);
   }
 }
 
@@ -294,7 +362,6 @@ export async function updateResult(
 }
 
 export async function getUid(username: string) {
-
   // Запрос к таблице users для получения user_id по username
   const { data, error } = await supabase
     .from("users")
@@ -316,41 +383,169 @@ export async function getUid(username: string) {
   return data.user_id;
 }
 
-export async function getLastCallback (language: string){
+export async function getLastCallback(language: string) {
   const { data: lessonData, error: lessonError } = await supabase
-     .from(language)
-     .select("lesson_number")
-     .order("lesson_number", { ascending: false })
-     .limit(1);
- 
-   if (lessonError) {
-     throw new Error(lessonError.message);
-   }
- 
-   if (lessonData.length === 0) {
-     return null;
-   }
- 
-   const largestLessonNumber = lessonData[0].lesson_number;
- 
-   const { data: subtopicData, error: subtopicError } = await supabase
-     .from(language)
-     .select("subtopic")
-     .eq("lesson_number", largestLessonNumber)
-     .order("subtopic", { ascending: false })
-     .limit(1);
- 
-   if (subtopicError) {
-     throw new Error(subtopicError.message);
-   }
- 
-   if (subtopicData.length === 0) {
-     return null;
-   }
- 
-   const largestSubtopic = subtopicData[0].subtopic;
+    .from(language)
+    .select("lesson_number")
+    .order("lesson_number", { ascending: false })
+    .limit(1);
 
-   return { lesson_number: largestLessonNumber, subtopic: largestSubtopic };
- }
+  if (lessonError) {
+    throw new Error(lessonError.message);
+  }
+
+  if (lessonData.length === 0) {
+    return null;
+  }
+
+  const largestLessonNumber = lessonData[0].lesson_number;
+
+  const { data: subtopicData, error: subtopicError } = await supabase
+    .from(language)
+    .select("subtopic")
+    .eq("lesson_number", largestLessonNumber)
+    .order("subtopic", { ascending: false })
+    .limit(1);
+
+  if (subtopicError) {
+    throw new Error(subtopicError.message);
+  }
+
+  if (subtopicData.length === 0) {
+    return null;
+  }
+
+  const largestSubtopic = subtopicData[0].subtopic;
+
+  return { lesson_number: largestLessonNumber, subtopic: largestSubtopic };
+}
+
+export const getUser = async (username: string) => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username);
+
+  return data;
+};
+
+export const checkUsername = async (username: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username);
+  if (error) {
+    console.log(error, "error checkUsername");
+    return false;
+  }
+  return data ? data.length > 0 : false;
+};
+
+export const checkUsernameAndReturnUser = async (
+  username: string,
+): Promise<{
+  isUserExist: boolean;
+  user: SupabaseUser;
+}> => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username);
+
+  if (error) {
+    console.log(error, "error checkUsername");
+    return {
+      isUserExist: false,
+      user: {} as SupabaseUser,
+    };
+  }
+  return {
+    isUserExist: data ? data.length > 0 : false,
+    user: data[0],
+  };
+};
+
+export async function checkAndReturnUser(
+  username: string,
+): Promise<{
+  isUserExist: boolean;
+  user: SupabaseUser;
+}> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username);
+
+  if (error) {
+    console.log(error, "error checkUsername");
+    return {
+      isUserExist: false,
+      user: {} as SupabaseUser,
+    };
+  }
+  return {
+    isUserExist: data ? data.length > 0 : false,
+    user: data[0],
+  };
+}
+
+export const checkUsernameCodes = async (
+  replyText: string,
+): Promise<{
+  isInviterExist: boolean;
+  invitation_codes: string;
+  inviter_user_id: string;
+  error?: boolean;
+}> => {
+  try {
+    console.log(replyText, "replyText");
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("username", replyText);
+    console.log(userData, "userData");
+    console.log(userError, "userError");
+
+    const { data: rooms, error: roomsError } = await supabase
+      .from("rooms")
+      .select("*")
+      .eq("username", replyText);
+    console.log(rooms, "rooms");
+    const invitation_codes = rooms && rooms[0]?.codes;
+
+    console.log(invitation_codes, "invitation_codes");
+
+    if (userError) {
+      return {
+        isInviterExist: false,
+        invitation_codes: "",
+        error: true,
+        inviter_user_id: "",
+      };
+    }
+
+    return {
+      isInviterExist: userData.length > 0 ? true : false,
+      invitation_codes,
+      inviter_user_id: userData[0].user_id,
+    };
+  } catch (error) {
+    return {
+      isInviterExist: false,
+      invitation_codes: "",
+      error: true,
+      inviter_user_id: "",
+    };
+  }
+};
+
+export const getRooms = async (username: string) => {
+  const { data, error } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("username", username);
+
+  return data;
+};
 
 export { supabase };

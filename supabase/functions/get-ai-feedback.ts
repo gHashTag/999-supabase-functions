@@ -1,10 +1,10 @@
-interface getAiFeedbackT{
-  query: string,
-  endpoint: string,
-  token: string
+interface getAiFeedbackT {
+  query: string;
+  endpoint: string;
+  token: string;
 }
 
-async function getAiFeedback({query, endpoint, token}: getAiFeedbackT) {
+async function getAiFeedback({ query, endpoint, token }: getAiFeedbackT) {
   const response = await fetch(
     endpoint,
     {
@@ -16,7 +16,7 @@ async function getAiFeedback({query, endpoint, token}: getAiFeedbackT) {
       body: JSON.stringify({ question: query }),
     },
   );
-  console.log(response)
+  console.log(response, "response");
   const result = await response.json();
   return result.text;
 }

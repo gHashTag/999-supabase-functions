@@ -1,33 +1,72 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+console.log(`Function "ai_kochey_bot" up and running!`);
 
-// Setup type definitions for built-in Supabase Runtime APIs
-/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
+import {
+  Bot,
+  GrammyError,
+  HttpError,
+  webhookCallback,
+} from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-import { createUser, supabase } from "@/utils/supabase";
+import {
+  checkUsernameCodes,
+  createUser,
+  getRooms,
+  getSupabaseUser,
+  setMyWorkspace,
+  supabase,
+} from "../utils/supabase.ts";
+import { transliterate } from "../utils/openai/transliterate.ts";
+import { create100MsRoom } from "../utils/100ms/create-room.ts";
+import { getAiFeedback } from "../get-ai-feedback.ts";
+import { DEV } from "../utils/helpers.ts";
 
-import { botAiKoshey } from "../utils/telegram/bots.ts";
-import { create100MsRoom } from "@/helpers/api/create-100ms-room";
+if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY")) {
+  throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY is not set");
+}
 
-import { checkUsernameCodes } from "@/hooks/useSupabase";
-import { transliterate } from "@/helpers/api/transliterate";
-import { getRooms } from "@/hooks/useSupabase";
-import { handleUpdateAiKoshey } from "../utils/telegram/bots.ts";
+if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST")) {
+  throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST is not set");
+}
+
+if (!Deno.env.get("AI_KOSHEY_URL")) {
+  throw new Error("AI_KOSHEY_URL is not set");
+}
+
+if (!Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN")) {
+  throw new Error("AI_KOSHEY_FLOWISE_TOKEN is not set");
+}
+
+const aiKosheyUrl = Deno.env.get("AI_KOSHEY_URL");
+const aiKosheyFlowiseToken = Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN");
+const tokenProd = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY");
+const tokenTest = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST");
+
+const token = DEV === "false" ? tokenProd : tokenTest;
+
+const botAiKoshey = new Bot(token || "");
+
+botAiKoshey.catch((err) => {
+  const ctx = err.ctx;
+  console.error(`Error while handling update ${ctx.update.update_id}:`);
+  const e = err.error;
+  if (e instanceof GrammyError) {
+    console.error("Error in request:", e.description);
+  } else if (e instanceof HttpError) {
+    console.error("Could not contact Telegram:", e);
+  } else {
+    console.error("Unknown error:", e);
+  }
+});
 
 botAiKoshey.command("start", async (ctx) => {
+  console.log("start");
   await ctx.replyWithChatAction("typing");
-
   const select_izbushka = ctx?.message?.text && ctx.message.text.split(" ")[1];
 
   if (select_izbushka) {
     const username = ctx.update.message?.from.username;
 
     const {
-      data: updateUserSelectIzbushkaData,
       error: updateUserSelectIzbushkaError,
     } = await supabase
       .from("users")
@@ -41,14 +80,13 @@ botAiKoshey.command("start", async (ctx) => {
       );
     }
 
-    console.log(updateUserSelectIzbushkaData, "updateUserSelectIzbushkaData");
-
     ctx.reply(
       `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
     );
+    return;
   } else {
     ctx.reply(
-      `🏰 Добро пожаловать в Тридевятое Царство, ${ctx.update.message?.from.first_name}! Всемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает. Чтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
+      `🏰 Добро пожаловать в Тридевятое Царство, ${ctx.update.message?.from.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
       {
         reply_markup: {
           force_reply: true,
@@ -56,35 +94,42 @@ botAiKoshey.command("start", async (ctx) => {
       },
     );
     createUser(ctx);
+    return;
   }
 });
 
-botAiKoshey.on("message", async (ctx) => {
+botAiKoshey.on("message:text", async (ctx) => {
+  console.log(ctx.message, "message");
   await ctx.replyWithChatAction("typing");
   const username = ctx.message.from.username;
   const replyText = ctx.message.text;
+  // console.log(replyText, "replyText");
 
   const { data, error } = await supabase
     .from("users")
     .select("*")
     .eq("username", username);
 
+  // console.log(data, "data");
+  // console.log(error, "error");
   const user_id = data && data[0]?.user_id;
   // Проверяем, является ли сообщение ответом (есть ли reply_to_message)
   if (ctx.message.reply_to_message) {
     // Проверяем, содержит ли текст оригинального сообщения определенный текст
     const originalMessageText = ctx.message.reply_to_message.text;
-    // console.log(originalMessageText, "originalMessageText");
+    console.log(originalMessageText, "originalMessageText");
     if (
       originalMessageText &&
-      originalMessageText.includes("🏰 Добро пожаловать")
+      (originalMessageText.includes("🏰 Добро пожаловать") ||
+        originalMessageText.includes("🔒 Ох, увы и ах!"))
     ) {
       // Обрабатываем ответ пользователя
 
       // Действия с ответом пользователя, например, сохранение токена
+
       const { isInviterExist, invitation_codes, inviter_user_id } =
         await checkUsernameCodes(replyText as string);
-
+      console.log(isInviterExist, "isInviterExist");
       try {
         if (isInviterExist) {
           const newUser = {
@@ -96,11 +141,18 @@ botAiKoshey.on("message", async (ctx) => {
             inviter: inviter_user_id,
             invitation_codes,
           };
+          console.log(newUser, "newUser");
 
-          const { data: createUserData, error: createUserError } =
-            await supabase.from("users").insert([{ ...newUser }]);
+          const { error: userDataError } = await supabase
+            .from("users").insert([{ ...newUser }]);
 
-          const isPayment = true;
+          // const isPayment = true;
+
+          const user_id = ctx.message.from.username;
+
+          const userData = user_id && await getSupabaseUser(user_id);
+
+          await setMyWorkspace(userData.user_id);
 
           ctx.reply(
             `🏰 Благоволи войти в волшебные пределы Тридевятого Царства, где сказание оживает, а чудеса само собой рядом ступают. ${ctx.update.message?.from.first_name}!`,
@@ -121,13 +173,21 @@ botAiKoshey.on("message", async (ctx) => {
               },
             },
           );
+          return;
         } else {
           ctx.reply(
             `🔒 Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.`,
+            {
+              reply_markup: {
+                force_reply: true,
+              },
+            },
           );
+          return;
         }
       } catch (error) {
         ctx.reply(`Что-то пошло не так, попробуйте ещё раз.`);
+        return;
       }
     }
 
@@ -148,8 +208,10 @@ botAiKoshey.on("message", async (ctx) => {
             },
           },
         );
+        return;
       } catch (error) {
         console.error(error);
+        return;
       }
     }
 
@@ -189,7 +251,6 @@ botAiKoshey.on("message", async (ctx) => {
         ctx.reply(
           `🌌 Ключ ко вратам Тридевятого Царства, где мечты твои обретут образ, и магия плетётся по воле твоей. Сие словечко проходное отворит двери избушки на курьих ножках, ведущей тебя к тайнам безграничным и чудесам незримым.\n\n🗝️ Словечко: ${ctx.message.from.username}\n🏰 Вход в Тридевятое Царство: @dao999nft_dev_bot`,
         );
-
         ctx.reply(
           `🏡 Нажми на кнопку и запусти чудодейственные механизмы сети мировой, ты сможешь мгновенно окинуть взором свои владения, не отходя от домашнего очага.
         `,
@@ -206,14 +267,35 @@ botAiKoshey.on("message", async (ctx) => {
             },
           },
         );
+        return;
       } catch (error) {
         ctx.reply(`Что-то пошло не так, попробуйте ещё раз.`);
+        return;
       }
     }
+  } else {
+    const query = ctx?.message?.text;
+    console.log(query, "query");
+    try {
+      if (query && aiKosheyUrl && aiKosheyFlowiseToken) {
+        const feedback = await getAiFeedback({
+          query,
+          endpoint: aiKosheyUrl,
+          token: aiKosheyFlowiseToken,
+        });
+        await ctx.reply(feedback, { parse_mode: "Markdown" });
+        return;
+      }
+    } catch (error) {
+      console.error("Ошибка при получении ответа AI:", error);
+      return;
+    }
+    return;
   }
 });
 
 botAiKoshey.on("callback_query:data", async (ctx) => {
+  console.log(ctx.callbackQuery, "callback_query");
   await ctx.replyWithChatAction("typing");
 
   const callbackData = ctx.callbackQuery.data;
@@ -227,6 +309,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
           force_reply: true,
         },
       });
+      return;
     } catch (error) {
       console.error(error);
     }
@@ -234,7 +317,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   if (callbackData === "show_izbushka") {
     const rooms = username && (await getRooms(username));
-
+    // console.log(rooms, "rooms");
     try {
       ctx.reply("🏡 Выберите избушку", {
         reply_markup: {
@@ -242,7 +325,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             ? rooms
               .filter((room: any) => room)
               .map((room: any) => ({
-                text: room.original_name,
+                text: room.name,
                 callback_data: `select_izbushka_${room.id}`,
               }))
               .reduce((acc: any, curr: any, index: number) => {
@@ -254,8 +337,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             : [],
         },
       });
+      return;
     } catch (error) {
       console.error("error show_izbushka", error);
+      return;
     }
   }
   if (callbackData.includes("select_izbushka")) {
@@ -276,46 +361,39 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     }
 
     ctx.reply(
-      `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
+      `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n🌟 Также поделись этой ссылкою с другом своим, чтобы присоединится он к избушке твоей и не забудь сказать ему ты словечко проходное в Царство Тридевятое, коим является твой телеграм юзернейм.
+      `,
     );
 
     ctx.reply(
-      `Приглашение в избушку. Нажми на кнопку чтобы прсоединиться!\n\nhttps://t.me/dao999nft_dev_bot?start=${select_izbushka}`,
+      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/ai_koshey_bot?start=${select_izbushka}`,
     );
+    return;
   }
 });
 
-// bot.on("message:text", async (ctx) => {
-//   await ctx.replyWithChatAction("typing");
-//   const text = ctx.message.text;
-//   try {
-//     const feedback = await getAiFeedback(text);
-//     await ctx.reply(feedback, { parse_mode: "Markdown" });
-//   } catch (error) {
-//     console.error("Ошибка при получении ответа AI:", error);
-//   }
-// });
+await botAiKoshey.api.setMyCommands([
+  {
+    command: "/start",
+    description: "Start the bot",
+  },
+  // {
+  //   command: "/room",
+  //   description: "Create a room",
+  // },
+]);
 
-// bot.start();
+const handleUpdate = webhookCallback(botAiKoshey, "std/http");
 
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
-    if (
-      url.searchParams.get("secret") !==
-        Deno.env.get("NEXT_PUBLIC_SUPABASE_FUNCTION_SECRET")
-    ) {
+    if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
       return new Response("not allowed", { status: 405 });
     }
 
-    const result = await handleUpdateAiKoshey(req);
-    if (!(result instanceof Response)) {
-      console.error("handleUpdate не вернул объект Response", result);
-      return new Response("Internal Server Error", { status: 500 });
-    }
-    return result;
+    return await handleUpdate(req);
   } catch (err) {
-    console.error("Ошибка при обработке запроса:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    console.error(err);
   }
 });
