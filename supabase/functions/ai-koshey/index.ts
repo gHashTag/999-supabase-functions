@@ -14,7 +14,6 @@ import {
   getRoomsCopperPipes,
   getRoomsWater,
   setSelectedIzbushka,
-  supabase,
 } from "../_shared/utils/supabase.ts";
 
 import { getAiFeedback } from "../get-ai-feedback.ts";
@@ -100,7 +99,9 @@ botAiKoshey.command("start", async (ctx: Context) => {
         select_izbushka,
       };
       try {
-        await createUser(user);
+        const newUser = await createUser(user);
+        console.log(newUser, "newUser");
+        newUser && await setSelectedIzbushka(newUser.username, select_izbushka);
         ctx.reply(
           `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
         );
@@ -109,7 +110,6 @@ botAiKoshey.command("start", async (ctx: Context) => {
           `🔒 Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.`,
         );
       }
-
       return;
     }
   } else {
@@ -121,6 +121,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
         },
       },
     );
+    return;
   }
 });
 
@@ -315,10 +316,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     }
   }
   if (callbackData.includes("select_izbushka")) {
-    const izbushka = callbackData.split("_")[2];
+    const select_izbushka = callbackData.split("_")[2];
 
-    if (izbushka) {
-      username && await setSelectedIzbushka(username, izbushka);
+    if (select_izbushka) {
+      username && await setSelectedIzbushka(username, select_izbushka);
     }
 
     ctx.reply(
@@ -327,7 +328,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     );
 
     ctx.reply(
-      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/ai_koshey_bot?username=${username}&izbushka=${izbushka}`,
+      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/ai_koshey_bot?username=${username}&izbushka=${select_izbushka}`,
     );
     return;
   }
