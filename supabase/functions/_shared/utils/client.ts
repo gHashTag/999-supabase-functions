@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { DEV } from "./helpers.ts";
+import { DEV } from "./constants.ts";
 
 export async function getWorkspaceById(workspace_id: string) {
   const supabaseClient = client();

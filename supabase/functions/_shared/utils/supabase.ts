@@ -1,4 +1,3 @@
-import C from "https://esm.sh/v135/bufferutil@4.0.8/denonext/bufferutil.mjs";
 import { client } from "./client.ts";
 
 interface QuestionContext {
@@ -100,6 +99,21 @@ export async function setMyWorkspace(user_id: string) {
   return data;
 }
 
+type userCtx = {
+  update: {
+    message: {
+      from: {
+        id: number;
+        username: string;
+        first_name: string;
+        last_name: string;
+        is_bot: boolean;
+        language_code: string;
+      };
+    };
+  };
+};
+
 export async function createUser(ctx: any) {
   const { first_name, last_name, username, is_bot, language_code, id } =
     ctx.update.message.from;
@@ -149,6 +163,9 @@ export async function createRoom(username: string) {
     .select("*")
     .eq("username", username);
 
+  if (error) {
+    console.error(error, "error createRoom");
+  }
   return data;
 }
 
@@ -253,13 +270,13 @@ export const getSupabaseUser = async (username: string) => {
       .single();
 
     if (response.error && response.error.code === "PGRST116") {
-      console.error("getSupabaseUser: Пользователь не найден");
+      console.error("getSupabaseUser: User not found");
       return null;
     }
 
     if (response.error) {
       console.error(
-        "Ошибка при получении информации о пользователе:",
+        "Error getting user information:",
         response.error,
       );
       return null;
@@ -267,7 +284,7 @@ export const getSupabaseUser = async (username: string) => {
 
     return response.data;
   } catch (error) {
-    // console.error("Ошибка при получении информации о пользователе:", error);
+    console.error("Error getting user information:", error);
     return null;
   }
 };
@@ -354,11 +371,11 @@ export async function updateResult(
     .upsert({ user_id, [language]: value }, { onConflict: "user_id" });
 
   if (error) {
-    console.error("Ошибка при обновлении результата:", error);
+    console.error("Error updating result:", error);
     throw error;
   }
 
-  console.log("Результат успешно обновлен или вставлен:", data);
+  console.log("Result successfully updated or inserted:", data);
 }
 
 export async function getUid(username: string) {
@@ -370,12 +387,12 @@ export async function getUid(username: string) {
     .single();
 
   if (error) {
-    console.error("Ошибка при получении user_id:", error.message);
+    console.error("Error getting user_id:", error.message);
     throw new Error(error.message);
   }
 
   if (!data) {
-    console.error("Пользователь не найден");
+    console.error("User not found");
     return null; // или выбросить ошибку, если пользователь должен существовать
   }
 
@@ -425,7 +442,9 @@ export const getUser = async (username: string) => {
     .from("users")
     .select("*")
     .eq("username", username);
-
+  if (error) {
+    console.error(error, "error getUser");
+  }
   return data;
 };
 
@@ -435,7 +454,7 @@ export const checkUsername = async (username: string): Promise<boolean> => {
     .select("*")
     .eq("username", username);
   if (error) {
-    console.log(error, "error checkUsername");
+    console.error(error, "error checkUsername");
     return false;
   }
   return data ? data.length > 0 : false;
@@ -453,7 +472,7 @@ export const checkUsernameAndReturnUser = async (
     .eq("username", username);
 
   if (error) {
-    console.log(error, "error checkUsername");
+    console.error(error, "error checkUsername");
     return {
       isUserExist: false,
       user: {} as SupabaseUser,
@@ -498,22 +517,20 @@ export const checkUsernameCodes = async (
   error?: boolean;
 }> => {
   try {
-    console.log(replyText, "replyText");
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("*")
       .eq("username", replyText);
-    console.log(userData, "userData");
-    console.log(userError, "userError");
 
     const { data: rooms, error: roomsError } = await supabase
       .from("rooms")
       .select("*")
       .eq("username", replyText);
-    console.log(rooms, "rooms");
-    const invitation_codes = rooms && rooms[0]?.codes;
 
-    console.log(invitation_codes, "invitation_codes");
+    if (roomsError) {
+      console.error(roomsError, "roomsError");
+    }
+    const invitation_codes = rooms && rooms[0]?.codes;
 
     if (userError) {
       return {
@@ -530,6 +547,7 @@ export const checkUsernameCodes = async (
       inviter_user_id: userData[0].user_id,
     };
   } catch (error) {
+    console.error(error, "error checkUsernameCodes");
     return {
       isInviterExist: false,
       invitation_codes: "",
@@ -544,7 +562,35 @@ export const getRooms = async (username: string) => {
     .from("rooms")
     .select("*")
     .eq("username", username);
+  if (error) {
+    console.error(error, "error getRooms");
+  }
+  return data;
+};
 
+export const getRoomsWater = async (username: string) => {
+  const { data, error } = await supabase
+    .from("user_passport")
+    .select(`*, rooms(id, name, chat_id, type, codes)`)
+    .eq("username", username)
+    .eq("is_owner", false)
+    .eq("type", "room");
+
+  if (error) {
+    console.error(error, "error getRooms water");
+  }
+  return data;
+};
+
+export const getRoomsCopperPipes = async () => {
+  const { data, error } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("public", true);
+
+  if (error) {
+    console.error(error, "error getRooms copper pipes");
+  }
   return data;
 };
 

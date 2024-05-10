@@ -1,14 +1,14 @@
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
-import { client, getWorkspaceById } from "../utils/client.ts";
+import { client, getWorkspaceById } from "../_shared/utils/client.ts";
 import { Bot } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
-import { translateText } from "../utils/translateText.ts";
+import { translateText } from "../_shared/utils/translateText.ts";
 
-import { createChatCompletionJson } from "../utils/createChatCompletionJson.ts";
+import { createChatCompletionJson } from "../_shared/utils/createChatCompletionJson.ts";
 import { corsHeaders } from "../_shared/corsHeaders.ts";
 import { headers } from "../_shared/headers.ts";
-import { createEmoji } from "../utils/createEmoji.ts";
+import { createEmoji } from "../_shared/utils/createEmoji.ts";
 
 type Task = {
   assignee: {

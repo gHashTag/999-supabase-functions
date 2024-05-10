@@ -2,6 +2,7 @@ console.log(`Function "ai_kochey_bot" up and running!`);
 
 import {
   Bot,
+  Context,
   GrammyError,
   HttpError,
   webhookCallback,
@@ -9,16 +10,15 @@ import {
 
 import {
   checkUsernameCodes,
-  createUser,
   getRooms,
-  getSupabaseUser,
-  setMyWorkspace,
+  getRoomsCopperPipes,
+  getRoomsWater,
   supabase,
-} from "../utils/supabase.ts";
-import { transliterate } from "../utils/openai/transliterate.ts";
-import { create100MsRoom } from "../utils/100ms/create-room.ts";
+} from "../_shared/utils/supabase.ts";
+
 import { getAiFeedback } from "../get-ai-feedback.ts";
-import { DEV } from "../utils/helpers.ts";
+import { DEV } from "../_shared/utils/constants.ts";
+import { createUser } from "../_shared/utils/nextapi/index.ts";
 
 if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY")) {
   throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY is not set");
@@ -46,6 +46,17 @@ const token = DEV ? tokenTest : tokenProd;
 
 const botAiKoshey = new Bot(token || "");
 
+export type CreateUserT = {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  is_bot: boolean;
+  language_code: string;
+  chat_id: number;
+  inviter: string;
+};
+
 botAiKoshey.catch((err) => {
   const ctx = err.ctx;
   console.error(`Error while handling update ${ctx.update.update_id}:`);
@@ -59,13 +70,13 @@ botAiKoshey.catch((err) => {
   }
 });
 
-botAiKoshey.command("start", async (ctx) => {
+botAiKoshey.command("start", async (ctx: Context) => {
   console.log("start");
   await ctx.replyWithChatAction("typing");
   const select_izbushka = ctx?.message?.text && ctx.message.text.split(" ")[1];
 
   if (select_izbushka) {
-    const username = ctx.update.message?.from.username;
+    const username = ctx?.update?.message?.from?.username;
 
     const {
       error: updateUserSelectIzbushkaError,
@@ -87,87 +98,83 @@ botAiKoshey.command("start", async (ctx) => {
     return;
   } else {
     ctx.reply(
-      `🏰 Добро пожаловать в Тридевятое Царство, ${ctx.update.message?.from.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
+      `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
       {
         reply_markup: {
           force_reply: true,
         },
       },
     );
-    createUser(ctx);
-    return;
   }
 });
 
-botAiKoshey.on("message:text", async (ctx) => {
-  console.log(ctx.message, "message");
+botAiKoshey.on("message:text", async (ctx: Context) => {
   await ctx.replyWithChatAction("typing");
-  const username = ctx.message.from.username;
-  const replyText = ctx.message.text;
-  // console.log(replyText, "replyText");
+  const inviter = ctx?.message?.text;
 
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", username);
-
-  // console.log(data, "data");
-  // console.log(error, "error");
-  const user_id = data && data[0]?.user_id;
   // Проверяем, является ли сообщение ответом (есть ли reply_to_message)
-  if (ctx.message.reply_to_message) {
+  if (ctx?.message?.reply_to_message) {
     // Проверяем, содержит ли текст оригинального сообщения определенный текст
-    const originalMessageText = ctx.message.reply_to_message.text;
+    const originalMessageText = ctx?.message?.reply_to_message?.text;
     console.log(originalMessageText, "originalMessageText");
     if (
       originalMessageText &&
       (originalMessageText.includes("🏰 Добро пожаловать") ||
         originalMessageText.includes("🔒 Ох, увы и ах!"))
     ) {
-      // Обрабатываем ответ пользователя
-
-      // Действия с ответом пользователя, например, сохранение токена
-
-      const { isInviterExist, invitation_codes, inviter_user_id } =
-        await checkUsernameCodes(replyText as string);
-      console.log(isInviterExist, "isInviterExist");
       try {
+        const { isInviterExist } = await checkUsernameCodes(inviter as string);
+
         if (isInviterExist) {
-          const newUser = {
-            first_name: ctx.message.from.first_name,
-            last_name: ctx.message.from.last_name,
-            username: ctx.message.from.username,
-            language_code: ctx.message.from.language_code,
-            telegram_id: ctx.message.from.id,
-            inviter: inviter_user_id,
-            invitation_codes,
+          // const user = {
+          //   "id": 144022502,
+          //   "username": "testuser",
+          //   "first_name": "Hello",
+          //   "last_name": "World",
+          //   "is_bot": false,
+          //   "language_code": "ru",
+          //   "chat_id": 1299933,
+          //   "inviter": "ec0c948a-2b96-4ccd-942f-0a991d78a94f",
+          //   "invitation_codes": "[{}]",
+          //   "telegram_id": 144022519,
+          //   "email": "",
+          //   "photo_url": "",
+          // };
+          const message = ctx.update.message;
+          const user = {
+            id: message?.from?.id,
+            username: message?.from?.username,
+            first_name: message?.from?.first_name,
+            last_name: message?.from?.last_name,
+            is_bot: message?.from?.is_bot,
+            language_code: message?.from?.language_code,
+            chat_id: message?.chat?.id,
+            inviter: message?.from?.username,
+            invitation_codes: "",
+            telegram_id: message?.from?.id,
           };
+          const newUser = await createUser(user);
+
           console.log(newUser, "newUser");
 
-          const { error: userDataError } = await supabase
-            .from("users").insert([{ ...newUser }]);
-
-          // const isPayment = true;
-
-          const user_id = ctx.message.from.username;
-
-          const userData = user_id && await getSupabaseUser(user_id);
-
-          await setMyWorkspace(userData.user_id);
-
-          ctx.reply(
-            `🏰 Благоволи войти в волшебные пределы Тридевятого Царства, где сказание оживает, а чудеса само собой рядом ступают. ${ctx.update.message?.from.first_name}!`,
+          newUser && ctx.reply(
+            `🏰 Избушка повернулась к тебе передом, а к лесу задом. Выбирай куда пойдешь ты по Царству Тридевятому. На лево пойдешь в огонь попадешь, на право в водичке омолодишься, а прямо пойдешь в медную трубу войдешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
+          `,
             {
               reply_markup: {
                 inline_keyboard: [
                   [
                     {
-                      text: "🛰 Построить избушку",
-                      callback_data: "name_izbushka",
+                      text: "🔥 Огонь",
+                      callback_data: "fire",
                     },
                     {
-                      text: "🏡 Узреть избушки",
-                      callback_data: "show_izbushka",
+                      text: "💧 Вода",
+                      callback_data: "water",
+                    },
+                    {
+                      text: "🎺 Медные трубы",
+                      callback_data: "copper_pipes",
                     },
                   ],
                 ],
@@ -187,113 +194,28 @@ botAiKoshey.on("message:text", async (ctx) => {
           return;
         }
       } catch (error) {
-        ctx.reply(`Что-то пошло не так, попробуйте ещё раз.`);
-        return;
-      }
-    }
-
-    if (originalMessageText?.includes("Как назовем избушку?")) {
-      try {
-        const { error: createRoomError } = await supabase.from("rooms").insert({
-          name: replyText,
-          user_id,
-          username,
-          original_name: replyText,
-        });
-        // console.log(createRoomError, "createRoomError");
-        ctx.reply(
-          "🗝️ Для того чтобы связать вашего цифрового двойника с личным нейросетевым ассистентом, пожалуйста, введите специальный токен, выданный BotFather.",
-          {
-            reply_markup: {
-              force_reply: true,
-            },
-          },
-        );
-        return;
-      } catch (error) {
         console.error(error);
-        return;
       }
-    }
-
-    if (
-      originalMessageText?.includes(
-        "🗝️ Для того чтобы связать вашего цифрового двойника с личным нейросетевым ассистентом, пожалуйста, введите специальный токен, выданный BotFather.",
-      )
-    ) {
-      const userToken = ctx.update.message.text;
-
-      const { data: dataRooms, error: errorRooms } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("id", { ascending: false });
-
-      const lastElement = dataRooms && dataRooms[0];
-
-      const translateName = transliterate(lastElement?.name);
-
-      const newData = {
-        id: lastElement?.id,
-        name: translateName,
-        original_name: lastElement?.name,
-        type: "meets",
-        username: ctx.message.from.username,
-        user_id,
-        token: userToken,
-        chat_id: ctx.message.chat.id,
-        lang: ctx.message.from.language_code,
-      };
-      console.log(newData, "newData");
+      // Обрабатываем ответ пользовател
+    } else {
+      const query = ctx?.message?.text;
 
       try {
-        await create100MsRoom(newData);
-        ctx.reply(
-          `✨ Построена избушка, дабы отныне могли вы словесный обмен творить и земляков своих ближайших призывать, отправь им словечко проходное.`,
-        );
-        ctx.reply(
-          `🌌 Ключ ко вратам Тридевятого Царства, где мечты твои обретут образ, и магия плетётся по воле твоей. Сие словечко проходное отворит двери избушки на курьих ножках, ведущей тебя к тайнам безграничным и чудесам незримым.\n\n🗝️ Словечко: ${ctx.message.from.username}\n🏰 Вход в Тридевятое Царство: @dao999nft_dev_bot`,
-        );
-        ctx.reply(
-          `🏡 Нажми на кнопку и запусти чудодейственные механизмы сети мировой, ты сможешь мгновенно окинуть взором свои владения, не отходя от домашнего очага.
-        `,
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: "🏡 Узреть избушки",
-                    callback_data: "show_izbushka",
-                  },
-                ],
-              ],
-            },
-          },
-        );
-        return;
+        if (query && aiKosheyUrl && aiKosheyFlowiseToken) {
+          const feedback = await getAiFeedback({
+            query,
+            endpoint: aiKosheyUrl,
+            token: aiKosheyFlowiseToken,
+          });
+          await ctx.reply(feedback, { parse_mode: "Markdown" });
+          return;
+        }
       } catch (error) {
-        ctx.reply(`Что-то пошло не так, попробуйте ещё раз.`);
+        console.error("Ошибка при получении ответа AI:", error);
         return;
       }
-    }
-  } else {
-    const query = ctx?.message?.text;
-
-    try {
-      if (query && aiKosheyUrl && aiKosheyFlowiseToken) {
-        const feedback = await getAiFeedback({
-          query,
-          endpoint: aiKosheyUrl,
-          token: aiKosheyFlowiseToken,
-        });
-        await ctx.reply(feedback, { parse_mode: "Markdown" });
-        return;
-      }
-    } catch (error) {
-      console.error("Ошибка при получении ответа AI:", error);
       return;
     }
-    return;
   }
 });
 
@@ -304,6 +226,90 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   const callbackData = ctx.callbackQuery.data;
 
   const username = ctx.update && ctx.update.callback_query.from.username;
+
+  if (callbackData === "fire") {
+    try {
+      const rooms = username && (await getRooms(username));
+      ctx.reply("🏡 Выберите свою избушку", {
+        reply_markup: {
+          inline_keyboard: rooms
+            ? rooms
+              .filter((room: any) => room)
+              .map((room: any) => ({
+                text: room.name,
+                callback_data: `select_izbushka_${room.id}`,
+              }))
+              .reduce((acc: any, curr: any, index: number) => {
+                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
+                acc[row] = acc[row] || [];
+                acc[row].push(curr);
+                return acc;
+              }, [])
+            : [],
+        },
+      });
+      return;
+    } catch (error) {
+      console.error(error);
+      await ctx.reply("🔥 Огонь", error);
+    }
+  }
+
+  if (callbackData === "water") {
+    try {
+      const rooms = username && (await getRoomsWater(username));
+
+      ctx.reply("🏡 Выберите избушку", {
+        reply_markup: {
+          inline_keyboard: rooms
+            ? rooms
+              .filter((room: any) => room)
+              .map((room: any) => ({
+                text: room.rooms.name,
+                callback_data: `select_izbushka_${room.rooms.id}`,
+              }))
+              .reduce((acc: any, curr: any, index: number) => {
+                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
+                acc[row] = acc[row] || [];
+                acc[row].push(curr);
+                return acc;
+              }, [])
+            : [],
+        },
+      });
+      return;
+    } catch (error) {
+      console.error(error);
+      await ctx.reply("Water", error);
+    }
+  }
+
+  if (callbackData === "copper_pipes") {
+    try {
+      const rooms = await getRoomsCopperPipes();
+      ctx.reply("🏡 Выберите свою избушку", {
+        reply_markup: {
+          inline_keyboard: rooms
+            ? rooms
+              .filter((room: any) => room)
+              .map((room: any) => ({
+                text: room.name,
+                callback_data: `select_izbushka_${room.id}`,
+              }))
+              .reduce((acc: any, curr: any, index: number) => {
+                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
+                acc[row] = acc[row] || [];
+                acc[row].push(curr);
+                return acc;
+              }, [])
+            : [],
+        },
+      });
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   if (callbackData === "name_izbushka") {
     try {
@@ -326,14 +332,15 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         reply_markup: {
           inline_keyboard: rooms
             ? rooms
-              .filter((room: any) => room)
-              .map((room: any) => ({
+              .filter((room) => room)
+              .map((room) => ({
                 text: room.name,
                 callback_data: `select_izbushka_${room.id}`,
               }))
-              .reduce((acc: any, curr: any, index: number) => {
-                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
+              .reduce((acc, curr, index) => {
+                const row = Math.floor(index / 1); // Set the number of buttons in one row (here there are 2 buttons in a row)
                 acc[row] = acc[row] || [];
+                //@ts-ignore hide
                 acc[row].push(curr);
                 return acc;
               }, [])

@@ -8,14 +8,14 @@ import {
   resetProgress,
   updateProgress,
   updateResult,
-} from "../utils/supabase.ts";
+} from "../_shared/utils/supabase.ts";
 import { pathIncrement } from "../path-increment.ts";
 import { getAiFeedback } from "../get-ai-feedback.ts";
 import { checkSubscription } from "../check-subscription.ts";
 import {
   handleUpdateJavaScript,
   javaScriptDevBot,
-} from "../utils/telegram/bots.ts";
+} from "../_shared/utils/telegram/bots.ts";
 
 javaScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
