@@ -16,19 +16,22 @@ type CreateUserProps = {
 };
 
 export async function createUser(data: CreateUserProps) {
-  const url = `${PRODUCTION_URL}/api/create-user`;
+  try {
+    const url = `${PRODUCTION_URL}/api/create-user`;
 
-  console.log(data, "data");
-  console.log(url, "url");
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
 
-  const result = await response.json();
-  console.log(result, "result");
-  return result;
+    const result = await response.json();
+
+    return result;
+  } catch (error) {
+    console.error(error, "error");
+    return { error: error };
+  }
 }

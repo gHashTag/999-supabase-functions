@@ -509,7 +509,7 @@ export async function checkAndReturnUser(
 }
 
 export const checkUsernameCodes = async (
-  replyText: string,
+  username: string,
 ): Promise<{
   isInviterExist: boolean;
   invitation_codes: string;
@@ -520,12 +520,12 @@ export const checkUsernameCodes = async (
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("*")
-      .eq("username", replyText);
+      .eq("username", username);
 
     const { data: rooms, error: roomsError } = await supabase
       .from("rooms")
       .select("*")
-      .eq("username", replyText);
+      .eq("username", username);
 
     if (roomsError) {
       console.error(roomsError, "roomsError");

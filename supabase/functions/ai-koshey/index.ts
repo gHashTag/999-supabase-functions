@@ -13,6 +13,7 @@ import {
   getRooms,
   getRoomsCopperPipes,
   getRoomsWater,
+  setSelectedIzbushka,
   supabase,
 } from "../_shared/utils/supabase.ts";
 
@@ -73,29 +74,44 @@ botAiKoshey.catch((err) => {
 botAiKoshey.command("start", async (ctx: Context) => {
   console.log("start");
   await ctx.replyWithChatAction("typing");
-  const select_izbushka = ctx?.message?.text && ctx.message.text.split(" ")[1];
+  const params = ctx?.message?.text && ctx?.message?.text.split(" ");
 
-  if (select_izbushka) {
-    const username = ctx?.update?.message?.from?.username;
-
-    const {
-      error: updateUserSelectIzbushkaError,
-    } = await supabase
-      .from("users")
-      .update({ select_izbushka })
-      .eq("username", username);
-
-    if (updateUserSelectIzbushkaError) {
-      console.log(
-        updateUserSelectIzbushkaError,
-        "updateUserSelectIzbushkaError",
-      );
-    }
-
-    ctx.reply(
-      `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
+  const inviterUsername = params && params[0];
+  console.log(inviterUsername, "inviterUsername");
+  const select_izbushka = params && params[1];
+  console.log(select_izbushka, "select_izbushka");
+  if (select_izbushka && inviterUsername) {
+    const { isInviterExist, inviter_user_id } = await checkUsernameCodes(
+      inviterUsername,
     );
-    return;
+    if (isInviterExist) {
+      const message = ctx.update.message;
+      const user = {
+        id: message?.from?.id,
+        username: message?.from?.username,
+        first_name: message?.from?.first_name,
+        last_name: message?.from?.last_name,
+        is_bot: message?.from?.is_bot,
+        language_code: message?.from?.language_code,
+        chat_id: message?.chat?.id,
+        inviter: inviter_user_id,
+        invitation_codes: "",
+        telegram_id: message?.from?.id,
+        select_izbushka,
+      };
+      try {
+        await createUser(user);
+        ctx.reply(
+          `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
+        );
+      } catch (error) {
+        ctx.reply(
+          `🔒 Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.`,
+        );
+      }
+
+      return;
+    }
   } else {
     ctx.reply(
       `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
@@ -126,20 +142,6 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         const { isInviterExist } = await checkUsernameCodes(inviter as string);
 
         if (isInviterExist) {
-          // const user = {
-          //   "id": 144022502,
-          //   "username": "testuser",
-          //   "first_name": "Hello",
-          //   "last_name": "World",
-          //   "is_bot": false,
-          //   "language_code": "ru",
-          //   "chat_id": 1299933,
-          //   "inviter": "ec0c948a-2b96-4ccd-942f-0a991d78a94f",
-          //   "invitation_codes": "[{}]",
-          //   "telegram_id": 144022519,
-          //   "email": "",
-          //   "photo_url": "",
-          // };
           const message = ctx.update.message;
           const user = {
             id: message?.from?.id,
@@ -313,20 +315,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     }
   }
   if (callbackData.includes("select_izbushka")) {
-    const select_izbushka = callbackData.split("_")[2];
+    const izbushka = callbackData.split("_")[2];
 
-    if (select_izbushka) {
-      const { error: updateUserSelectIzbushkaError } = await supabase
-        .from("users")
-        .update({ select_izbushka })
-        .eq("username", username);
-
-      if (updateUserSelectIzbushkaError) {
-        console.error(
-          updateUserSelectIzbushkaError,
-          "updateUserSelectIzbushkaError",
-        );
-      }
+    if (izbushka) {
+      username && await setSelectedIzbushka(username, izbushka);
     }
 
     ctx.reply(
@@ -335,7 +327,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     );
 
     ctx.reply(
-      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/ai_koshey_bot?start=${select_izbushka}`,
+      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/ai_koshey_bot?username=${username}&izbushka=${izbushka}`,
     );
     return;
   }
