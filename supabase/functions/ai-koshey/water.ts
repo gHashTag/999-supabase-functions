@@ -2,6 +2,7 @@ console.log(`Function "ai_kochey_bot" up and running!`);
 
 import {
   Bot,
+  Context,
   GrammyError,
   HttpError,
   webhookCallback,
@@ -12,6 +13,7 @@ import {
   getRooms,
   getSupabaseUser,
   setMyWorkspace,
+  setSelectedIzbushka,
   supabase,
 } from "../_shared/utils/supabase.ts";
 import { transliterate } from "../_shared/utils/openai/transliterate.ts";
@@ -58,27 +60,15 @@ botAiKoshey.catch((err) => {
   }
 });
 
-botAiKoshey.command("start", async (ctx) => {
+botAiKoshey.command("start", async (ctx: Context) => {
   console.log("start");
   await ctx.replyWithChatAction("typing");
   const select_izbushka = ctx?.message?.text && ctx.message.text.split(" ")[1];
 
   if (select_izbushka) {
-    const username = ctx.update.message?.from.username;
+    const username = ctx?.update?.message?.from?.username;
 
-    const {
-      error: updateUserSelectIzbushkaError,
-    } = await supabase
-      .from("users")
-      .update({ select_izbushka })
-      .eq("username", username);
-
-    if (updateUserSelectIzbushkaError) {
-      console.log(
-        updateUserSelectIzbushkaError,
-        "updateUserSelectIzbushkaError",
-      );
-    }
+    username && await setSelectedIzbushka(username, select_izbushka);
 
     ctx.reply(
       `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
@@ -86,7 +76,7 @@ botAiKoshey.command("start", async (ctx) => {
     return;
   } else {
     ctx.reply(
-      `🏰 Добро пожаловать в Тридевятое Царство, ${ctx.update.message?.from.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
+      `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
       {
         reply_markup: {
           force_reply: true,
@@ -357,17 +347,9 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     const select_izbushka = callbackData.split("_")[2];
 
     if (select_izbushka) {
-      const { error: updateUserSelectIzbushkaError } = await supabase
-        .from("users")
-        .update({ select_izbushka })
-        .eq("username", username);
-
-      if (updateUserSelectIzbushkaError) {
-        console.log(
-          updateUserSelectIzbushkaError,
-          "updateUserSelectIzbushkaError",
-        );
-      }
+      username && await setSelectedIzbushka(username, select_izbushka);
+    } else {
+      ctx.reply(`🤔 Что-то пошло не так, попробуйте ещё раз.`);
     }
 
     ctx.reply(

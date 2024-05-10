@@ -562,6 +562,7 @@ export const getRooms = async (username: string) => {
     .from("rooms")
     .select("*")
     .eq("username", username);
+
   if (error) {
     console.error(error, "error getRooms");
   }
@@ -579,7 +580,12 @@ export const getRoomsWater = async (username: string) => {
   if (error) {
     console.error(error, "error getRooms water");
   }
-  return data;
+  const transformedArray = data?.map((item) => ({
+    ...item,
+    ...item.rooms,
+    rooms: undefined,
+  }));
+  return transformedArray;
 };
 
 export const getRoomsCopperPipes = async () => {
@@ -587,6 +593,31 @@ export const getRoomsCopperPipes = async () => {
     .from("rooms")
     .select("*")
     .eq("public", true);
+
+  if (error) {
+    console.error(error, "error getRooms copper pipes");
+  }
+  return data;
+};
+export const setSelectedIzbushka = async (
+  username: string,
+  select_izbushka: string,
+) => {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("users")
+    .update({ select_izbushka })
+    .eq("username", username)
+    .select("*");
+
+  if (error) {
+    console.error(
+      error,
+      "updateUserSelectIzbushkaError",
+    );
+  }
 
   if (error) {
     console.error(error, "error getRooms copper pipes");

@@ -158,7 +158,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           console.log(newUser, "newUser");
 
           newUser && ctx.reply(
-            `🏰 Избушка повернулась к тебе передом, а к лесу задом. Выбирай куда пойдешь ты по Царству Тридевятому. На лево пойдешь в огонь попадешь, на право в водичке омолодишься, а прямо пойдешь в медную трубу войдешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
+            `🏰 Избушка повернулась к тебе передом, а к лесу задом. Выбирай куда пойдешь ты по Царству Тридевятому. На лево пойдешь огонем согреешься, на право в водичке омолодишься, а прямо пойдешь в медную трубу попадешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
           `,
             {
               reply_markup: {
@@ -227,88 +227,47 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   const username = ctx.update && ctx.update.callback_query.from.username;
 
+  const handleRoomSelection = async (
+    ctx: any,
+    rooms: any,
+    errorMessage: any,
+  ) => {
+    try {
+      if (rooms) {
+        const keyboard = rooms
+          .filter((room: any) => room)
+          .map((room: any) => ({
+            text: room.name,
+            callback_data: `select_izbushka_${room.id}`,
+          }))
+          .reduce((acc: any, curr: any, index: number) => {
+            const row = Math.floor(index / 1);
+            acc[row] = acc[row] || [];
+            acc[row].push(curr);
+            return acc;
+          }, []);
+
+        ctx.reply("🏡 Выберите свою избушку", {
+          reply_markup: { inline_keyboard: keyboard },
+        });
+      } else {
+        ctx.reply(errorMessage);
+      }
+    } catch (error) {
+      console.error(error);
+      ctx.reply(errorMessage, error);
+    }
+  };
+
   if (callbackData === "fire") {
-    try {
-      const rooms = username && (await getRooms(username));
-      ctx.reply("🏡 Выберите свою избушку", {
-        reply_markup: {
-          inline_keyboard: rooms
-            ? rooms
-              .filter((room: any) => room)
-              .map((room: any) => ({
-                text: room.name,
-                callback_data: `select_izbushka_${room.id}`,
-              }))
-              .reduce((acc: any, curr: any, index: number) => {
-                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
-                acc[row] = acc[row] || [];
-                acc[row].push(curr);
-                return acc;
-              }, [])
-            : [],
-        },
-      });
-      return;
-    } catch (error) {
-      console.error(error);
-      await ctx.reply("🔥 Огонь", error);
-    }
-  }
-
-  if (callbackData === "water") {
-    try {
-      const rooms = username && (await getRoomsWater(username));
-
-      ctx.reply("🏡 Выберите избушку", {
-        reply_markup: {
-          inline_keyboard: rooms
-            ? rooms
-              .filter((room: any) => room)
-              .map((room: any) => ({
-                text: room.rooms.name,
-                callback_data: `select_izbushka_${room.rooms.id}`,
-              }))
-              .reduce((acc: any, curr: any, index: number) => {
-                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
-                acc[row] = acc[row] || [];
-                acc[row].push(curr);
-                return acc;
-              }, [])
-            : [],
-        },
-      });
-      return;
-    } catch (error) {
-      console.error(error);
-      await ctx.reply("Water", error);
-    }
-  }
-
-  if (callbackData === "copper_pipes") {
-    try {
-      const rooms = await getRoomsCopperPipes();
-      ctx.reply("🏡 Выберите свою избушку", {
-        reply_markup: {
-          inline_keyboard: rooms
-            ? rooms
-              .filter((room: any) => room)
-              .map((room: any) => ({
-                text: room.name,
-                callback_data: `select_izbushka_${room.id}`,
-              }))
-              .reduce((acc: any, curr: any, index: number) => {
-                const row = Math.floor(index / 1); // Устанавливаем количество кнопок в одном ряду (здесь 2 кнопки в ряду)
-                acc[row] = acc[row] || [];
-                acc[row].push(curr);
-                return acc;
-              }, [])
-            : [],
-        },
-      });
-      return;
-    } catch (error) {
-      console.error(error);
-    }
+    const rooms = username && (await getRooms(username));
+    await handleRoomSelection(ctx, rooms, "🔥 Огонь");
+  } else if (callbackData === "water") {
+    const rooms = username && (await getRoomsWater(username));
+    await handleRoomSelection(ctx, rooms, "💧 Вода");
+  } else if (callbackData === "copper_pipes") {
+    const rooms = await getRoomsCopperPipes();
+    await handleRoomSelection(ctx, rooms, "🎺 Медные трубы");
   }
 
   if (callbackData === "name_izbushka") {
@@ -363,7 +322,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         .eq("username", username);
 
       if (updateUserSelectIzbushkaError) {
-        console.log(
+        console.error(
           updateUserSelectIzbushkaError,
           "updateUserSelectIzbushkaError",
         );
