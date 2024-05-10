@@ -1,5 +1,7 @@
 import { DEV } from "../helpers.ts";
 
+console.log(DEV, "DEV");
+
 if (!Deno.env.get("LOCAL_URL")) {
   throw new Error("LOCAL_URL is not set");
 }
@@ -19,7 +21,7 @@ if (!Deno.env.get("SUPABASE_URL")) {
 const SITE_URL = DEV
   ? Deno.env.get("LOCAL_URL")
   : Deno.env.get("PRODUCTION_URL");
-
+console.log(SITE_URL, "SITE_URL");
 const headers = {
   "Content-Type": "application/json",
 };
@@ -29,6 +31,7 @@ type CreateRoom = {
   name: string;
   type: string;
   username: string | undefined;
+  user_id: string | undefined;
   token: string | undefined;
   chat_id: number;
   lang: string | undefined;
@@ -38,17 +41,19 @@ async function create100MsRoom({
   name,
   type,
   username,
+  user_id,
   token,
   chat_id,
   lang,
 }: CreateRoom) {
-  const url = `${SITE_URL}/api/create-room-from-tg`;
-
+  const url = `${Deno.env.get("PRODUCTION_URL")}/api/create-room-from-tg`;
+  console.log(url, "url");
   const newData = {
     id,
     name,
     type,
     username,
+    user_id,
     token,
     chat_id,
     lang,

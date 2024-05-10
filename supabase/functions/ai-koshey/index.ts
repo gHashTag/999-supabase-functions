@@ -38,10 +38,11 @@ if (!Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN")) {
 
 const aiKosheyUrl = Deno.env.get("AI_KOSHEY_URL");
 const aiKosheyFlowiseToken = Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN");
+
 const tokenProd = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY");
 const tokenTest = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST");
 
-const token = DEV === "false" ? tokenProd : tokenTest;
+const token = DEV ? tokenTest : tokenProd;
 
 const botAiKoshey = new Bot(token || "");
 
@@ -220,7 +221,7 @@ botAiKoshey.on("message:text", async (ctx) => {
         "🗝️ Для того чтобы связать вашего цифрового двойника с личным нейросетевым ассистентом, пожалуйста, введите специальный токен, выданный BotFather.",
       )
     ) {
-      const token = ctx.update.message.text;
+      const userToken = ctx.update.message.text;
 
       const { data: dataRooms, error: errorRooms } = await supabase
         .from("rooms")
@@ -238,10 +239,12 @@ botAiKoshey.on("message:text", async (ctx) => {
         original_name: lastElement?.name,
         type: "meets",
         username: ctx.message.from.username,
-        token,
+        user_id,
+        token: userToken,
         chat_id: ctx.message.chat.id,
         lang: ctx.message.from.language_code,
       };
+      console.log(newData, "newData");
 
       try {
         await create100MsRoom(newData);
@@ -275,7 +278,7 @@ botAiKoshey.on("message:text", async (ctx) => {
     }
   } else {
     const query = ctx?.message?.text;
-    console.log(query, "query");
+
     try {
       if (query && aiKosheyUrl && aiKosheyFlowiseToken) {
         const feedback = await getAiFeedback({
