@@ -76,13 +76,14 @@ botAiKoshey.command("start", async (ctx: Context) => {
   const params = ctx?.message?.text && ctx?.message?.text.split(" ");
 
   const inviterUsername = params && params[0];
-  console.log(inviterUsername, "inviterUsername");
+
   const select_izbushka = params && params[1];
-  console.log(select_izbushka, "select_izbushka");
+
   if (select_izbushka && inviterUsername) {
-    const { isInviterExist, inviter_user_id } = await checkUsernameCodes(
-      inviterUsername,
-    );
+    const { isInviterExist, inviter_user_id, invitation_codes } =
+      await checkUsernameCodes(
+        inviterUsername,
+      );
     if (isInviterExist) {
       const message = ctx.update.message;
       const user = {
@@ -94,7 +95,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
         language_code: message?.from?.language_code,
         chat_id: message?.chat?.id,
         inviter: inviter_user_id,
-        invitation_codes: "",
+        invitation_codes,
         telegram_id: message?.from?.id,
         select_izbushka,
       };
@@ -106,9 +107,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
           `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
         );
       } catch (error) {
-        ctx.reply(
-          `🔒 Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.`,
-        );
+        ctx.reply(`🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`);
       }
       return;
     }
