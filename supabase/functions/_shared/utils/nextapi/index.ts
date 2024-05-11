@@ -1,19 +1,5 @@
+import { CreateUserProps } from "../../types/index.ts";
 import { PRODUCTION_URL } from "../constants.ts";
-
-type CreateUserProps = {
-  id?: number;
-  username?: string;
-  first_name?: string;
-  last_name?: string;
-  is_bot?: boolean;
-  language_code?: string;
-  chat_id?: number;
-  inviter?: string;
-  invitation_codes: string;
-  telegram_id?: number;
-  email?: string;
-  photo_url?: string;
-};
 
 export async function createUser(data: CreateUserProps) {
   try {

@@ -9,6 +9,7 @@ import {
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
 import {
+  checkAndReturnUser,
   checkUsernameCodes,
   getRooms,
   getRoomsCopperPipes,
@@ -73,22 +74,24 @@ botAiKoshey.catch((err) => {
 botAiKoshey.command("start", async (ctx: Context) => {
   console.log("start");
   await ctx.replyWithChatAction("typing");
-  const params = ctx?.message?.text && ctx?.message?.text.split(" ");
-
-  const inviterUsername = params && params[0];
-
+  const params = ctx?.message?.text && ctx?.message?.text.split("_");
+  console.log(params, "params");
+  const inviter = params && params[0].split(" ")[1];
+  console.log(inviter, "inviter");
   const select_izbushka = params && params[1];
+  console.log(select_izbushka, "select_izbushka");
 
-  if (select_izbushka && inviterUsername) {
+  if (select_izbushka && inviter) {
     const { isInviterExist, inviter_user_id, invitation_codes } =
       await checkUsernameCodes(
-        inviterUsername,
+        inviter,
       );
     if (isInviterExist) {
       const message = ctx.update.message;
-      const user = {
+      const username = message?.from?.username;
+      const userObj = {
         id: message?.from?.id,
-        username: message?.from?.username,
+        username,
         first_name: message?.from?.first_name,
         last_name: message?.from?.last_name,
         is_bot: message?.from?.is_bot,
@@ -100,12 +103,39 @@ botAiKoshey.command("start", async (ctx: Context) => {
         select_izbushka,
       };
       try {
-        const newUser = await createUser(user);
-        console.log(newUser, "newUser");
-        newUser && await setSelectedIzbushka(newUser.username, select_izbushka);
-        ctx.reply(
-          `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Избушка" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!`,
-        );
+        if (username) {
+          const { isUserExist } = await checkAndReturnUser(username);
+          if (!isUserExist) {
+            const newUser = await createUser(userObj);
+            console.log(newUser, "newUser");
+          }
+          await setSelectedIzbushka(username, select_izbushka);
+          ctx.reply(
+            `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми на кнопку "Избушка" или выбирай куда пойдешь ты по Царству Тридевятому.\nНа лево пойдешь огонем согреешься, на право в водичке омолодишься, а прямо пойдешь в медную трубу попадешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
+          `,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "🔥 Огонь",
+                      callback_data: "fire",
+                    },
+                    {
+                      text: "💧 Вода",
+                      callback_data: "water",
+                    },
+                    {
+                      text: "🎺 Медные трубы",
+                      callback_data: "copper_pipes",
+                    },
+                  ],
+                ],
+              },
+            },
+          );
+          return;
+        }
       } catch (error) {
         ctx.reply(`🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`);
       }
@@ -139,7 +169,9 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         originalMessageText.includes("🔒 Ох, увы и ах!"))
     ) {
       try {
-        const { isInviterExist } = await checkUsernameCodes(inviter as string);
+        const { isInviterExist, inviter_user_id } = await checkUsernameCodes(
+          inviter as string,
+        );
 
         if (isInviterExist) {
           const message = ctx.update.message;
@@ -151,13 +183,11 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             is_bot: message?.from?.is_bot,
             language_code: message?.from?.language_code,
             chat_id: message?.chat?.id,
-            inviter: message?.from?.username,
+            inviter: inviter_user_id,
             invitation_codes: "",
             telegram_id: message?.from?.id,
           };
           const newUser = await createUser(user);
-
-          console.log(newUser, "newUser");
 
           newUser && ctx.reply(
             `🏰 Избушка повернулась к тебе передом, а к лесу задом. Выбирай куда пойдешь ты по Царству Тридевятому. На лево пойдешь огонем согреешься, на право в водичке омолодишься, а прямо пойдешь в медную трубу попадешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
@@ -325,9 +355,9 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n🌟 Также поделись этой ссылкою с другом своим, чтобы присоединится он к избушке твоей и не забудь сказать ему ты словечко проходное в Царство Тридевятое, коим является твой телеграм юзернейм.
       `,
     );
-
+    const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
     ctx.reply(
-      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/ai_koshey_bot?username=${username}&izbushka=${select_izbushka}`,
+      `Приглашение в избушку. Нажми на кнопку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${username}_${select_izbushka}`,
     );
     return;
   }
