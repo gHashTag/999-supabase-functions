@@ -30,7 +30,7 @@ export const pythonDevBot = new Bot<MyContext>(
 );
 
 // handleUpdate
-export const handleUpdateAiKoshey = webhookCallback(botAiKoshey, "std/http");
+// export const handleUpdateAiKoshey = webhookCallback(botAiKoshey, "std/http");
 
 export const handleUpdateJavaScript = webhookCallback(
   javaScriptDevBot,

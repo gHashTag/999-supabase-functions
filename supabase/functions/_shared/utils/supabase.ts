@@ -303,6 +303,7 @@ export async function resetProgress(
     .eq("username", username)
     .single();
 
+    console.log(userData, "userData")
   if (userError || !userData) {
     throw new Error(userError?.message || "User not found");
   }
