@@ -11,6 +11,7 @@ import {
 import {
   checkAndReturnUser,
   checkUsernameCodes,
+  createPassport,
   getRooms,
   getRoomsCopperPipes,
   getRoomsWater,
@@ -82,63 +83,79 @@ botAiKoshey.command("start", async (ctx: Context) => {
   console.log(select_izbushka, "select_izbushka");
 
   if (select_izbushka && inviter) {
-    const { isInviterExist, inviter_user_id, invitation_codes } =
-      await checkUsernameCodes(
-        inviter,
-      );
-    if (isInviterExist) {
-      const message = ctx.update.message;
-      const username = message?.from?.username;
-      const userObj = {
-        id: message?.from?.id,
-        username,
-        first_name: message?.from?.first_name,
-        last_name: message?.from?.last_name,
-        is_bot: message?.from?.is_bot,
-        language_code: message?.from?.language_code,
-        chat_id: message?.chat?.id,
-        inviter: inviter_user_id,
-        invitation_codes,
-        telegram_id: message?.from?.id,
-        select_izbushka,
-      };
-      try {
+    try {
+      const { isInviterExist, inviter_user_id, invitation_codes } =
+        await checkUsernameCodes(
+          inviter,
+        );
+      if (isInviterExist) {
+        const message = ctx.update.message;
+        const username = message?.from?.username;
+        const first_name = message?.from?.first_name;
+        const last_name = message?.from?.last_name;
+        const userObj = {
+          id: message?.from?.id,
+          username,
+          first_name,
+          last_name,
+          is_bot: message?.from?.is_bot,
+          language_code: message?.from?.language_code,
+          chat_id: message?.chat?.id,
+          inviter: inviter_user_id,
+          invitation_codes,
+          telegram_id: message?.from?.id,
+          select_izbushka,
+        };
+
         if (username) {
-          const { isUserExist } = await checkAndReturnUser(username);
+          const { isUserExist, user } = await checkAndReturnUser(username);
           if (!isUserExist) {
-            const newUser = await createUser(userObj);
-            console.log(newUser, "newUser");
+            await createUser(userObj);
           }
-          await setSelectedIzbushka(username, select_izbushka);
-          ctx.reply(
-            `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми на кнопку "Избушка" или выбирай куда пойдешь ты по Царству Тридевятому.\nНа лево пойдешь огонем согреешься, на право в водичке омолодишься, а прямо пойдешь в медную трубу попадешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
-          `,
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: "🔥 Огонь",
-                      callback_data: "fire",
-                    },
-                    {
-                      text: "💧 Вода",
-                      callback_data: "water",
-                    },
-                    {
-                      text: "🎺 Медные трубы",
-                      callback_data: "copper_pipes",
-                    },
+          if (
+            first_name &&
+            last_name &&
+            username &&
+            user.user_id
+          ) {
+            await createPassport(
+              select_izbushka,
+              first_name,
+              last_name,
+              username,
+              user.user_id,
+            );
+            await setSelectedIzbushka(username, select_izbushka);
+            ctx.reply(
+              `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми на кнопку "Избушка" и свяжись с тем, кто пригласил тебя или выбирай куда пойдешь по Царству Тридевятому.\nНа лево пойдешь огонем согреешься, на право в водичке омолодишься, а прямо пойдешь в медную трубу попадешь.\n🔥 Пламя горячее - это твоя личная избушка, где твои желания сбываются.\n💧 Воды чистые к себе манят, где ты гость в избушках дорогой.\n🎺 Медные трубы - это чародейская избушка, где обучение к мудрости тебя ведет.
+              `,
+              {
+                reply_markup: {
+                  inline_keyboard: [
+                    [
+                      {
+                        text: "🔥 Огонь",
+                        callback_data: "fire",
+                      },
+                      {
+                        text: "💧 Вода",
+                        callback_data: "water",
+                      },
+                      {
+                        text: "🎺 Медные трубы",
+                        callback_data: "copper_pipes",
+                      },
+                    ],
                   ],
-                ],
+                },
               },
-            },
-          );
-          return;
+            );
+            return;
+          }
         }
-      } catch (error) {
-        ctx.reply(`🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`);
       }
+    } catch (error) {
+      ctx.reply(`🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`);
       return;
     }
   } else {

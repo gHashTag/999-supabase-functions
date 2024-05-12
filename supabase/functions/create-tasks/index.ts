@@ -188,7 +188,8 @@ Deno.serve(async (req) => {
         );
 
         const { data: users } = await supabaseClient.from("user_passport")
-          .select("*").eq("room_id", data.room_id);
+          .select("*").eq("room_id", data.room_id).eq("type", "room");
+
         console.log(users, "user_passport");
 
         const preparedUsers = getPreparedUsers(users);

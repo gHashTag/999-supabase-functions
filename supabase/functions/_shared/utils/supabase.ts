@@ -169,6 +169,82 @@ export async function createRoom(username: string) {
   return data;
 }
 
+export const checkPassport = async (
+  user_id: string,
+  workspace_id: string,
+  room_id: string,
+) => {
+  const { data: existingPassport, error } = await supabase
+    .from("user_passport")
+    .select("*")
+    .eq("user_id", user_id)
+    .eq("workspace_id", workspace_id)
+    .eq("room_id", room_id)
+    .eq("is_owner", false);
+
+  if (error) {
+    console.error("Error checking passport:", error);
+    return null;
+  }
+
+  return existingPassport.length > 0;
+};
+
+export async function createPassport(
+  room_id: string,
+  first_name: string,
+  last_name: string,
+  username: string,
+  user_id: string,
+) {
+  const { data: dataRoom, error: errorRoom } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("id", room_id)
+    .single();
+
+  if (errorRoom) {
+    console.error(errorRoom, "error getRoom");
+    throw new Error(errorRoom.message);
+  }
+
+  const isExistingPassport = await checkPassport(
+    user_id,
+    dataRoom.workspace_id,
+    dataRoom.room_id,
+  );
+
+  if (isExistingPassport) {
+    return isExistingPassport;
+  } else {
+    const passport = [
+      {
+        user_id,
+        workspace_id: dataRoom.workspace_id,
+        room_id: dataRoom.room_id,
+        first_name,
+        last_name,
+        username,
+        type: "room",
+        is_owner: false,
+        photo_url: "",
+      },
+    ];
+
+    const { data: dataPassport, error: errorPassport } = await supabase
+      .from("user_passport")
+      .insert(passport)
+      .select("*");
+
+    if (errorPassport) {
+      console.error(errorPassport, "error passport");
+      throw new Error(errorPassport.message);
+    }
+
+    return dataPassport;
+  }
+}
+
 export const getSelectIzbushkaId = async (selectIzbushka: string) => {
   const { data: selectIzbushkaData, error: selectIzbushkaError } =
     await supabase.from("rooms").select("*").eq("id", selectIzbushka);
