@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
 
         const { data: users } = await supabaseClient.from("user_passport")
           .select("*").eq("room_id", data.room_id);
-        console.log(users, "users");
+        console.log(users, "user_passport");
 
         const preparedUsers = getPreparedUsers(users);
         console.log(preparedUsers, "preparedUsers");
@@ -207,7 +207,8 @@ Deno.serve(async (req) => {
             user_id: "1a1e4c75-830c-4fe8-a312-c901c8aa144b",
             first_name: "Andrey",
             last_name: "O",
-            username: "reactotron"
+            username: "reactotron",
+            photo_url: "https://avatars.githubusercontent.com/u/10137008?v=4"
           },
           title: "🌌 Capture Universe",
           description: "Capture the Universe and a couple of stars in the Aldebaran constellation"
@@ -259,8 +260,14 @@ Deno.serve(async (req) => {
                   title: task.title,
                   description: task.description,
                   workspace_name,
+                  assgned_to: {
+                    user_id: task.assignee.user_id,
+                    username: task.assignee.username,
+                    photo_url: task.assignee.photo_url,
+                  },
                 },
-              ]);
+              ]).select("*");
+
               console.log(taskData, "taskData");
 
               if (taskData.error?.message) {
