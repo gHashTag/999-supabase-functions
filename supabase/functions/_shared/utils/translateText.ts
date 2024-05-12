@@ -17,12 +17,12 @@ export async function translateText(
     messages: [{
       role: "user",
       content:
-        `Translate the following English text to ${targetLanguage}: ${text}`,
+        `Translate the following English text to ${targetLanguage}. if some syntax is used, you need to save it. Text: ${text}`,
     }, {
       role: "system",
       content: systemPrompt,
     }],
-    model: "gpt-3.5-turbo",
+    model: "gpt-4-turbo-preview",
     stream: false,
     temperature: 0.1,
   });

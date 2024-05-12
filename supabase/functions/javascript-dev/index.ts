@@ -44,7 +44,7 @@ javaScriptDevBot.command("start", async (ctx) => {
   } else if (isSubscription === false) {
     const messageText = isRu
       ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
-      : `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`;
+      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
     await ctx.replyWithPhoto(
       isRu
         ? "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ca0YPRgNGBINCQ0LLRgtC+0LzQsNGC0LjQt9Cw0YbQuNGP8J+kliBCb3RNb3RoZXJf0J/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40LUg0L/QvtC0INGA0YPQutC+0LLQvtC00YHRgtCy0L7QvCDQvdC10LnRgNC+0L3QvdGL0YUg0L/QvtC80L7RidC90LjQutC+0LIuINCS0Ysg0LjQt9GD0YfQuNGC0LUgSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwg0KLQsNGBdCwgR3JhcGhRTCwgQXBvbGxvINC4INC40L3RgtC10LPRgNCw0YbQuNGOINGBINCx0LvQvtC60YfQtdC50L3QvtC8IFRPTiDQuCBUZWxlZ3JhbSBNaW5pIEFwcF8xNzE0NzE1NDA4"
@@ -108,10 +108,12 @@ javaScriptDevBot.on("callback_query:data", async (ctx) => {
       });
       if (questions.length > 0) {
         const {
-          topic,
+          topic: ruTopic,
           image_lesson_url,
+          topic_en: enTopic
         } = questions[0];
 
+        const topic = isRu ? ruTopic : enTopic;
         // Формируем сообщение
         const messageText =
           `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> 0 $IGLA </b>`;
@@ -177,13 +179,22 @@ javaScriptDevBot.on("callback_query:data", async (ctx) => {
         return;
       }
       const {
-        question,
-        variant_0,
-        variant_1,
-        variant_2,
+        question: ruQuestion,
+        variant_0: ruVariant_0,
+        variant_1: ruVariant_1,
+        variant_2: ruVariant_2,
+        question_en: enQuestion,
+        variant_0: enVariant_0,
+        variant_1: enVariant_1,
+        variant_2: enVariant_2,
         id,
         image_lesson_url,
       } = questions[0];
+
+      const question = isRu ? ruQuestion : enQuestion;
+      const variant_0 = isRu ? ruVariant_0 : enVariant_0;
+      const variant_1 = isRu ? ruVariant_1 : enVariant_1;
+      const variant_2 = isRu ? ruVariant_2 : enVariant_2;
 
       const user_id = await getUid(ctx.callbackQuery.from.username || "");
       if (!user_id) {
@@ -317,7 +328,8 @@ javaScriptDevBot.on("callback_query:data", async (ctx) => {
             ctx: getQuestionContext,
             language,
           });
-          const { topic, image_lesson_url } = newQuestions[0];
+          const { topic: ruTopic, image_lesson_url , topic_en: enTopic} = newQuestions[0];
+          const topic = isRu ? ruTopic : enTopic;
           // Формируем сообщение
           const messageText =
             `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> ${correctAnswers} $IGLA\n Total: ${allAnswers}</b>`;

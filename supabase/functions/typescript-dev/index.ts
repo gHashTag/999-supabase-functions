@@ -17,7 +17,7 @@ import {
   typeScriptDevBot,
 } from "../_shared/utils/telegram/bots.ts";
 
-typeScriptDevBot.command("start", async (ctx: any) => {
+typeScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   createUser(ctx);
   const isSubscription = await checkSubscription(
@@ -25,9 +25,14 @@ typeScriptDevBot.command("start", async (ctx: any) => {
     ctx.from?.id || 0,
     "-1001988802788",
   );
+  const isRu = ctx.from?.language_code === "ru";
+
   if (isSubscription === true) {
     ctx.reply(
-      `Hi, ${ctx.update.message?.from.first_name}! 🚀 Давай начнем с тестов – выбери один из них, чтобы проверить свои знания и подготовиться к захватывающему путешествию в мир программирования! 🖥️✨ `,
+      isRu
+        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования TypeScript с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы TypeScript, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир TypeScript? \nНачать тест(кнопка)`
+        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn TypeScript programming language with artificial intelligence! Here you can not only learn the basics of TypeScript, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of TypeScript? \nStart Test(button)`,
+      // ctx.t("startTypeScript"),
       {
         reply_markup: {
           inline_keyboard: [
@@ -37,10 +42,13 @@ typeScriptDevBot.command("start", async (ctx: any) => {
       },
     );
   } else if (isSubscription === false) {
-    const messageText =
-      `<b>Обучение программированию с ИИ</b>\nПогрузитесь в мир программирования вместе с нашими нейронными помощниками по JavaScript, TypeScript, React & React Native, GraphQL, Apollo и TON`;
+    const messageText = isRu
+      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
+      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
     await ctx.replyWithPhoto(
-      "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ce0LHRg9GH0LXQvdC40LUg0L/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40Y4g0YEg0JjQmF/Qn9C+0LPRgNGD0LfQuNGC0LXRgdGMINCyINC80LjRgCDQv9GA0L7Qs9GA0LDQvNC80LjRgNC+0LLQsNC90LjRjyDQstC80LXRgdGC0LUg0YEg0L3QsNGI0LjQvNC4INC90LXQudGA0L7QvdC90YvQvNC4INC/0L7QvNC+0YnQvdC40LrQsNC80Lgg0L/QviBKYXZhU2NyaXB0LCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwgR3JhcGhRTCwgQXBvbGxvINC4IFRPTl8xNzE0NTQ3MTYw",
+      isRu
+        ? "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ca0YPRgNGBINCQ0LLRgtC+0LzQsNGC0LjQt9Cw0YbQuNGP8J+kliBCb3RNb3RoZXJf0J/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40LUg0L/QvtC0INGA0YPQutC+0LLQvtC00YHRgtCy0L7QvCDQvdC10LnRgNC+0L3QvdGL0YUg0L/QvtC80L7RidC90LjQutC+0LIuINCS0Ysg0LjQt9GD0YfQuNGC0LUgSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwg0KLQsNGBdCwgR3JhcGhRTCwgQXBvbGxvINC4INC40L3RgtC10LPRgNCw0YbQuNGOINGBINCx0LvQvtC60YfQtdC50L3QvtC8IFRPTiDQuCBUZWxlZ3JhbSBNaW5pIEFwcF8xNzE0NzE1NDA4"
+        : "https://subscribebot.org/api/v1/snippet/subscription/25500?cache_key=OTkwMF9BdXRvbWF0aW9uIGNvdXJzZfCfpJYgQm90TW90aGVyX1dlIGludml0ZSB5b3UgdG8gZGl2ZSBpbnRvIHByb2dyYW1taW5nIHVuZGVyIHRoZSBndWlkYW5jZSBvZiBuZXVyYWwgYXNzaXN0YW50cy4gWW91IHdpbGwgbGVhcm4gSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwgVGHRgXQsIEdyYXBoUUwsIEFwb2xsbyBhbmQgaW50ZWdyYXRpb24gd2l0aCB0aGUgVE9OIGJsb2NrY2hhaW4gYW5kIFRlbGVncmFtIE1pbmkgQXBwXzE3MTQ3MTUzNjQ=",
       {
         caption: messageText,
         parse_mode: "HTML",
@@ -48,7 +56,9 @@ typeScriptDevBot.command("start", async (ctx: any) => {
           inline_keyboard: [
             [{
               text: "Подписаться",
-              url: "https://t.me/tribute/app?startapp=s5bT",
+              url: isRu
+                ? "https://t.me/tribute/app?startapp=s5bT"
+                : "https://t.me/tribute/app?startapp=s6Di",
             }],
           ],
         },
@@ -79,6 +89,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
   console.log(ctx);
   const callbackData = ctx.callbackQuery.data;
   const isHaveAnswer = callbackData.split("_").length === 4;
+  const isRu = ctx.from?.language_code === "ru";
 
   if (callbackData === "start_test") {
     try {
@@ -97,10 +108,12 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
       });
       if (questions.length > 0) {
         const {
-          topic,
+          topic: ruTopic,
           image_lesson_url,
+          topic_en: enTopic
         } = questions[0];
 
+        const topic = isRu ? ruTopic : enTopic;
         // Формируем сообщение
         const messageText =
           `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> 0 $IGLA </b>`;
@@ -159,18 +172,29 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           callbackData,
         );
         await ctx.reply(
-          "Одно из значений некорректно. Пожалуйста, проверьте данные.",
+          isRu
+            ? "Одно из значений некорректно. Пожалуйста, проверьте данные."
+            : "One of the values is incorrect. Please check the data.",
         );
         return;
       }
       const {
-        question,
-        variant_0,
-        variant_1,
-        variant_2,
+        question: ruQuestion,
+        variant_0: ruVariant_0,
+        variant_1: ruVariant_1,
+        variant_2: ruVariant_2,
+        question_en: enQuestion,
+        variant_0: enVariant_0,
+        variant_1: enVariant_1,
+        variant_2: enVariant_2,
         id,
         image_lesson_url,
       } = questions[0];
+
+      const question = isRu ? ruQuestion : enQuestion;
+      const variant_0 = isRu ? ruVariant_0 : enVariant_0;
+      const variant_1 = isRu ? ruVariant_1 : enVariant_1;
+      const variant_2 = isRu ? ruVariant_2 : enVariant_2;
 
       const user_id = await getUid(ctx.callbackQuery.from.username || "");
       if (!user_id) {
@@ -276,7 +300,9 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
                 value: true,
               });
               ctx.reply(
-                `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Ваш результат: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`,
+                isRu
+                  ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Ваш результат: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥳 Congratulations, you passed the test!</b>\n\n Your result: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             } else {
@@ -286,7 +312,9 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
                 value: false,
               });
               ctx.reply(
-                `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`,
+                isRu
+                  ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             }
@@ -300,7 +328,8 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
             ctx: getQuestionContext,
             language,
           });
-          const { topic, image_lesson_url } = newQuestions[0];
+          const { topic: ruTopic, image_lesson_url , topic_en: enTopic} = newQuestions[0];
+          const topic = isRu ? ruTopic : enTopic;
           // Формируем сообщение
           const messageText =
             `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> ${correctAnswers} $IGLA\n Total: ${allAnswers}</b>`;
@@ -328,7 +357,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
             return;
           }
         } else {
-          ctx.reply("Вопросы не найдены.");
+          ctx.reply(isRu ? "Вопросы не найдены." : "No questions found.");
         }
       } else {
         console.error("Invalid callback(289)");
@@ -343,7 +372,10 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
-    if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
+    if (
+      url.searchParams.get("secret") !==
+        Deno.env.get("FUNCTION_SECRET")
+    ) {
       return new Response("not allowed", { status: 405 });
     }
 
