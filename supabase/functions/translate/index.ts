@@ -1,6 +1,6 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
-import { translateText } from "../utils/translateText.ts";
+import { translateText } from "../_shared/utils/translateText.ts";
 
 Deno.serve(async (req: Request) => {
   const { text, targetLanguage } = await req.json();
