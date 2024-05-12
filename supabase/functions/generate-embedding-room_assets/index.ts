@@ -45,28 +45,3 @@ Deno.serve(async (req) => {
 
   return new Response("ok - updated");
 });
-
-// create embedding column in users table
-// alter table public.users
-// add column embedding vector (384);
-
-// create index if not exists users_embedding_idx on public.users using hnsw (embedding vector_ip_ops) tablespace pg_default;
-
-// create hook
-
-// create trigger on_inserted_or_updated_embedding_users
-// after insert
-// or
-// update of username,
-// first_name,
-// last_name,
-// position,
-// designation on public.users for each row
-// execute function supabase_functions.http_request (
-//   'https://dmrooqbmxdhdyblqzswu.supabase.co.supabase.co/functions/v1/generate-embedding-users',
-//   'POST',
-//   '{"Content-type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtcm9vcWJteGRoZHlibHF6c3d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDkwMzU2OTYsImV4cCI6MjAyNDYxMTY5Nn0.zCE28Ez7R06_QyGyI4Hmk-8SGi9ju6V5Jq1YCuhW8AY
-// # SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtcm9vcWJteGRoZHlibHF6c3d1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcwOTAzNTY5NiwiZXhwIjoyMDI0NjExNjk2fQ.Q3UK9aUA8-P-22GYAAU8-Bg2U4uhYc2a3_JzTuXSqpE"}',
-//   '{}',
-//   '5000'
-// );
