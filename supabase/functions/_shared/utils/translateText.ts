@@ -8,7 +8,7 @@ const systemPrompt =
 
 export async function translateText(
   text: string,
-  targetLanguage: string,
+  language_code: string,
 ): Promise<string> {
   // Здесь должен быть ваш код для перевода текста с помощью OpenAI
   // Например, вы можете использовать модель перевода или запрос к ChatGPT с указанием перевода
@@ -17,7 +17,7 @@ export async function translateText(
     messages: [{
       role: "user",
       content:
-        `Translate the following English text to ${targetLanguage}: ${text}`,
+        `Translate the following English text to ${language_code}: ${text}`,
     }, {
       role: "system",
       content: systemPrompt,

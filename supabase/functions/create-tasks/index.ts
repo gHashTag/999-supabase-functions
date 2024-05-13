@@ -9,6 +9,7 @@ import { createChatCompletionJson } from "../_shared/utils/createChatCompletionJ
 import { corsHeaders } from "../_shared/corsHeaders.ts";
 import { headers } from "../_shared/headers.ts";
 import { createEmoji } from "../_shared/utils/createEmoji.ts";
+import { createPassport } from "../_shared/utils/supabase.ts";
 
 type Task = {
   assignee: {
@@ -25,7 +26,7 @@ async function sendTasksToTelegram(
   chat_id: number,
   tasks: Task[],
   summary_short: string,
-  lang: string,
+  language_code: string,
   token: string,
 ) {
   const newTasks = tasks.map((task) => {
@@ -44,8 +45,8 @@ async function sendTasksToTelegram(
 
   let translatedSummaryShort = summary_short;
 
-  if (lang !== "en") {
-    translatedSummaryShort = await translateText(summary_short, lang);
+  if (language_code !== "en") {
+    translatedSummaryShort = await translateText(summary_short, language_code);
   }
 
   const bot = new Bot(token);
@@ -55,7 +56,7 @@ async function sendTasksToTelegram(
   for (const task of newTasks) {
     const translatedTask = await translateText(
       `${task.title}\n${task.description}`,
-      lang,
+      language_code,
     );
     await bot.api.sendMessage(chat_id, `${translatedTask}\n${task.assignee}`);
   }
@@ -63,7 +64,7 @@ async function sendTasksToTelegram(
 
 interface Data {
   room_id: string;
-  lang: string;
+  language_code: string;
   chat_id: number;
   token: string;
   description: string;
@@ -103,7 +104,8 @@ Deno.serve(async (req) => {
   }
 
   const { type, data } = await req.json();
-
+  console.log(type, "type");
+  console.log(data, "data");
   try {
     const supabaseClient = client();
 
@@ -168,7 +170,7 @@ Deno.serve(async (req) => {
           summary_short,
           transcription,
         };
-
+        console.log(roomAsset, "roomAsset");
         const { error: errorInsertRoomAsset } = await supabaseClient
           .from("room_assets")
           .insert([roomAsset]);
@@ -186,6 +188,7 @@ Deno.serve(async (req) => {
           transcription,
           systemPrompt,
         );
+        console.log(preparedTasks, "preparedTasks");
 
         const { data: users } = await supabaseClient.from("user_passport")
           .select("*").eq("room_id", data.room_id).eq("type", "room");
@@ -218,7 +221,7 @@ Deno.serve(async (req) => {
         // console.log(preparedTasks, "preparedTasks");
         const tasks = await createChatCompletionJson(prompt);
         const tasksArray = tasks && JSON.parse(tasks).tasks;
-
+        console.log(tasksArray, "tasksArray");
         if (Array.isArray(tasksArray)) {
           const newTasks = tasksArray.map((task: any) => {
             // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
@@ -233,9 +236,11 @@ Deno.serve(async (req) => {
             .select("*")
             .eq("room_id", data.room_id)) as { data: Data[]; error: any };
 
-          const { lang, chat_id, token, description } = roomData[0];
+          console.log(roomData, "roomData");
+          const { language_code, chat_id, token, description } = roomData[0];
 
           const workspace_id = description;
+          console.log(workspace_id, "workspace_id");
 
           const workspace = await getWorkspaceById(workspace_id);
 
@@ -246,7 +251,7 @@ Deno.serve(async (req) => {
             // Обработка случая, когда объект равен null или пустой
             console.log("workspace_name is null");
           }
-
+          console.log(workspace_name, "workspace_name");
           if (workspace_name) {
             for (const task of newTasks) {
               // Убедитесь, что userId существует и не равен null
@@ -261,15 +266,24 @@ Deno.serve(async (req) => {
                   title: task.title,
                   description: task.description,
                   workspace_name,
-                  assgned_to: {
+                  assigned_to: JSON.stringify({
                     user_id: task.assignee.user_id,
                     username: task.assignee.username,
                     photo_url: task.assignee.photo_url,
-                  },
+                  }),
                 },
               ]).select("*");
 
               console.log(taskData, "taskData");
+              await createPassport(
+                "task",
+                data.room_id,
+                task.assignee.first_name,
+                task.assignee.last_name,
+                task.assignee.username,
+                task.assignee.user_id,
+                task.id,
+              );
 
               if (taskData.error?.message) {
                 console.log("Error:", taskData.error.message);
@@ -281,7 +295,7 @@ Deno.serve(async (req) => {
                 chat_id,
                 newTasks,
                 summary_short,
-                lang,
+                language_code,
                 token,
               ).catch(console.error);
             }
