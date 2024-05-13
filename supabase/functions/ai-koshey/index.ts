@@ -51,6 +51,8 @@ const token = DEV ? tokenTest : tokenProd;
 
 const botAiKoshey = new Bot(token || "");
 
+const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
+
 export type CreateUserT = {
   id: number;
   username: string;
@@ -126,7 +128,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
 
   // Получение параметров из текста сообщения
   const params = ctx?.message?.text && ctx?.message?.text.split(" ")[1];
-  console.log(params, "params"); // Вывод параметров в консоль
+  console.log(params, "params");
+  const message = ctx.update.message;
+  const username = message?.from?.username;
+
   if (params) {
     const underscoreIndex = params.indexOf("_"); // Находим индекс первого символа '_'
     if (underscoreIndex !== -1) {
@@ -135,9 +140,6 @@ botAiKoshey.command("start", async (ctx: Context) => {
 
       console.log(select_izbushka, "select_izbushka"); // Выводит "100"
       console.log(inviter, "inviter"); // Выводит "ai_koshey_more"
-
-      const message = ctx.update.message;
-      const username = message?.from?.username;
 
       // Проверка наличия выбранной избушки и пригласившего пользователя
       if (select_izbushka && inviter) {
@@ -275,6 +277,26 @@ botAiKoshey.command("start", async (ctx: Context) => {
         }
       }
     }
+  } else {
+    if (username) {
+      try {
+        const { isUserExist, user } = await checkAndReturnUser(
+          username,
+        );
+
+        if (isUserExist) {
+          console.log("isUserExist");
+          await welcomeMenu(ctx);
+        } else {
+          console.log("NotUserExist");
+          await welcomeMessage(ctx);
+        }
+        return;
+      } catch (error) {
+        ctx.reply(`🤔 Error: checkAndReturnUser.\n${error}`);
+        throw new Error("Error: checkAndReturnUser.");
+      }
+    }
   }
 });
 
@@ -388,9 +410,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     rooms: any,
     type: string,
   ) => {
+    console.log(callbackData, "callbackData");
     try {
       if (rooms && rooms.length > 0) {
-        console.log(rooms, "rooms");
+        console.log(rooms, " handleRoomSelection rooms");
         const keyboard = rooms
           .filter((room: any) => room)
           .map((room: any) => ({
@@ -403,6 +426,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             acc[row].push(curr);
             return acc;
           }, []);
+        console.log(keyboard, "keyboard");
         if (type === "fire") {
           await ctx.reply(
             "🔥 Пламя горячее - это личные избушки, где твои слова пишутся и задачи создаются.",
@@ -410,6 +434,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
+          return;
         } else if (type === "water") {
           await ctx.reply(
             "💧 Воды чистые к себе манят, где гость ты в избушках дорогой.\n\nЗдесь избушки, к которым у тебя есть доступ.",
@@ -417,6 +442,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
+          return;
         } else if (type === "copper_pipes") {
           await ctx.reply(
             "🎺 Медные трубы - это чародейские избушки, где обучение к мудрости тебя ведет.",
@@ -424,8 +450,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
+          return;
         }
-
         return;
       } else {
         await ctx.reply(`У вас нет избушек куда вас пригласили`);
@@ -440,13 +466,15 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   if (callbackData === "fire") {
     const rooms = username && (await getRooms(username));
+    console.log(rooms, "rooms fire");
     await handleRoomSelection(ctx, rooms, "fire");
   } else if (callbackData === "water") {
     const rooms = username && (await getRoomsWater(username));
-    console.log(rooms, "rooms");
+    console.log(rooms, "rooms waters");
     await handleRoomSelection(ctx, rooms, "water");
   } else if (callbackData === "copper_pipes") {
     const rooms = await getRoomsCopperPipes();
+    console.log(rooms, "rooms copper_pipes");
     await handleRoomSelection(ctx, rooms, "copper_pipes");
   }
 
@@ -498,10 +526,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     if (select_izbushka) {
       username && await setSelectedIzbushka(username, select_izbushka);
     }
-    const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
+
     setTimeout(async () => {
       await ctx.reply(
-        `🏰 Приглашение в Тридевятое Царство 🏰.\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
+        `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
       );
       return;
     }, 500);
@@ -509,6 +537,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     await ctx.reply(
       `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
     );
+    return;
   }
 });
 
