@@ -12,7 +12,6 @@ import {
   checkAndReturnUser,
   checkPassportByRoomId,
   checkUsernameCodes,
-  createPassport,
   getRooms,
   getRoomsCopperPipes,
   getRoomsWater,
@@ -242,14 +241,16 @@ botAiKoshey.command("start", async (ctx: Context) => {
                           throw new Error("Error: setPassport.");
                         }
                       } else {
-                        ctx.reply(
+                        await ctx.reply(
                           `🤔 Error: getSelectIzbushkaId.\n${izbushka}`,
                         );
                         throw new Error("Error: getSelectIzbushkaId.");
                       }
                       return;
                     } catch (error) {
-                      ctx.reply(`🤔Error: getSelectIzbushkaId.\n${error}`);
+                      await ctx.reply(
+                        `🤔Error: getSelectIzbushkaId.\n${error}`,
+                      );
                       throw new Error("Error: getSelectIzbushkaId.");
                     }
                   }
@@ -260,7 +261,9 @@ botAiKoshey.command("start", async (ctx: Context) => {
             }
           }
         } catch (error) {
-          ctx.reply(`🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`);
+          await ctx.reply(
+            `🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`,
+          );
           return;
         }
       } else {
@@ -293,7 +296,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
         }
         return;
       } catch (error) {
-        ctx.reply(`🤔 Error: checkAndReturnUser.\n${error}`);
+        await ctx.reply(`🤔 Error: checkAndReturnUser.\n${error}`);
         throw new Error("Error: checkAndReturnUser.");
       }
     }
@@ -336,7 +339,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           };
           const newUser = await createUser(user);
 
-          newUser && ctx.reply(
+          newUser && await ctx.reply(
             intro({ language_code }),
             {
               reply_markup: {
@@ -361,7 +364,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           );
           return;
         } else {
-          ctx.reply(
+          await ctx.reply(
             `🔒 Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.`,
             {
               reply_markup: {
@@ -480,7 +483,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   if (callbackData === "name_izbushka") {
     try {
-      ctx.reply("Как назовем избушку?", {
+      await ctx.reply("Как назовем избушку?", {
         reply_markup: {
           force_reply: true,
         },
@@ -495,7 +498,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     const rooms = username && (await getRooms(username));
     // console.log(rooms, "rooms");
     try {
-      ctx.reply("🏡 Выберите избушку", {
+      await ctx.reply("🏡 Выберите избушку", {
         reply_markup: {
           inline_keyboard: rooms
             ? rooms
