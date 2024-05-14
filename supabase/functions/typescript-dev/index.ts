@@ -16,6 +16,8 @@ import {
   handleUpdateTypeScript,
   typeScriptDevBot,
 } from "../_shared/utils/telegram/bots.ts";
+import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
+import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
 
 typeScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
@@ -28,7 +30,7 @@ typeScriptDevBot.command("start", async (ctx) => {
   const isRu = ctx.from?.language_code === "ru";
 
   if (isSubscription === true) {
-    ctx.reply(
+    await ctx.reply(
       isRu
         ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования TypeScript с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы TypeScript, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир TypeScript? \nНачать тест(кнопка)`
         : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn TypeScript programming language with artificial intelligence! Here you can not only learn the basics of TypeScript, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of TypeScript? \nStart Test(button)`,
@@ -142,7 +144,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           return;
         }
       } else {
-        ctx.reply("Вопросы не найдены.");
+        await ctx.reply("Вопросы не найдены.");
       }
     } catch (error) {
       console.error(error);
@@ -273,10 +275,10 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
         let isTrueAnswer = null;
         if (Number(correct_option_id) === Number(answer)) {
           isTrueAnswer = true;
-          ctx.reply("✅");
+          await ctx.reply("✅");
         } else {
           isTrueAnswer = false;
-          ctx.reply("❌");
+          await ctx.reply("❌");
         }
         await updateProgress({ user_id, isTrue: isTrueAnswer, language });
         const newPath = await pathIncrement({
@@ -299,7 +301,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
                 language,
                 value: true,
               });
-              ctx.reply(
+              await ctx.reply(
                 isRu
                   ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Ваш результат: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`
                   : `<b>🥳 Congratulations, you passed the test!</b>\n\n Your result: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`,
@@ -311,7 +313,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
                 language,
                 value: false,
               });
-              ctx.reply(
+              await ctx.reply(
                 isRu
                   ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`
                   : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`,
@@ -357,7 +359,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
             return;
           }
         } else {
-          ctx.reply(isRu ? "Вопросы не найдены." : "No questions found.");
+          await ctx.reply(isRu ? "Вопросы не найдены." : "No questions found.");
         }
       } else {
         console.error("Invalid callback(289)");
@@ -369,24 +371,30 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
   }
 });
 
+typeScriptDevBot.catch((err) => {
+  const ctx = err.ctx;
+  console.error(`Error while handling update ${ctx.update.update_id}:`);
+  const e = err.error;
+  if (e instanceof GrammyError) {
+    console.error("Error in request:", e.description);
+  } else if (e instanceof HttpError) {
+    console.error("Could not contact Telegram:", e);
+  } else {
+    console.error("Unknown error:", e);
+  }
+});
+
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
-    if (
-      url.searchParams.get("secret") !==
-        Deno.env.get("FUNCTION_SECRET")
-    ) {
+    console.log(req)
+    if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
       return new Response("not allowed", { status: 405 });
     }
 
-    const result = await handleUpdateTypeScript(req);
-    if (!(result instanceof Response)) {
-      console.error("handleUpdate не вернул объект Response", result);
-      return new Response("Internal Server Error", { status: 500 });
-    }
-    return result;
+    return await handleUpdateTypeScript(req);
   } catch (err) {
-    console.error("Ошибка при обработке запроса:", err);
-    return new Response("Internal Server Error", { status: 500 });
+    console.error(err);
   }
 });
+
