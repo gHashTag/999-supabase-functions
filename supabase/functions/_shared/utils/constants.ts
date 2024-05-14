@@ -25,3 +25,7 @@ export const PRODUCTION_URL = Deno.env.get("PRODUCTION_URL");
 export const headers = {
   "Content-Type": "application/json",
 };
+
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

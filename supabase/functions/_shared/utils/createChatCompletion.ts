@@ -15,7 +15,7 @@ export async function createChatCompletion(
       role: "system",
       content: systemPrompt,
     }],
-    model: "gpt-4-1106-preview",
+    model: "gpt-4o",
     stream: false,
     temperature: 0.1,
     response_format: { type: "json_object" },

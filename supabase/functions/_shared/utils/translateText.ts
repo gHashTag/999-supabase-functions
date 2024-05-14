@@ -22,7 +22,7 @@ export async function translateText(
       role: "system",
       content: systemPrompt,
     }],
-    model: "gpt-4-turbo-preview",
+    model: "gpt-4o",
     stream: false,
     temperature: 0.1,
   });

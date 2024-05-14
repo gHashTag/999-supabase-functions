@@ -7,6 +7,7 @@ import {
   I18n,
   I18nFlavor,
 } from "https://deno.land/x/grammy_i18n@v1.0.2/mod.ts";
+import { DEV } from "../constants.ts";
 
 // Bot Context
 type MyContext = Context & I18nFlavor;
@@ -28,6 +29,39 @@ export const reactNativeDevBot = new Bot<MyContext>(
 export const pythonDevBot = new Bot<MyContext>(
   Deno.env.get("TELEGRA_BOT_PYTHON_DEV_TOKEN") || "",
 );
+
+if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY")) {
+  throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY is not set");
+}
+
+if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST")) {
+  throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST is not set");
+}
+
+if (!Deno.env.get("AI_KOSHEY_URL")) {
+  throw new Error("AI_KOSHEY_URL is not set");
+}
+
+if (!Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN")) {
+  throw new Error("AI_KOSHEY_FLOWISE_TOKEN is not set");
+}
+
+if (!Deno.env.get("SUPPORT_CHAT_ID")) {
+  throw new Error("SUPPORT_CHAT_ID is not set");
+}
+
+export const aiKosheyUrl = Deno.env.get("AI_KOSHEY_URL");
+export const aiKosheyFlowiseToken = Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN");
+
+const tokenProd = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY");
+const tokenTest = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST");
+export const suport_chat_id = Deno.env.get("SUPPORT_CHAT_ID");
+
+export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
+
+const token = DEV ? tokenTest : tokenProd;
+
+export const botAiKoshey = new Bot(token || "");
 
 // handleUpdate
 // export const handleUpdateAiKoshey = webhookCallback(botAiKoshey, "std/http");

@@ -189,20 +189,43 @@ export const checkPassport = async (
     return null;
   }
 
-  return existingPassport.length > 0;
+  return {
+    isExistingPassport: existingPassport.length > 0,
+    passport: existingPassport,
+    passport_id: existingPassport.length > 0
+      ? existingPassport[0].passport_id
+      : null,
+  };
 };
+
+export async function getPassportByRoomId(
+  room_id: string,
+) {
+  const { data, error } = await supabase.from("user_passport").select("*").eq(
+    "room_id",
+    room_id,
+  ).eq("type", "room");
+
+  if (error) console.log("getPassportByRoomId error:::", error);
+
+  return data;
+}
 
 export async function checkPassportByRoomId(
   user_id: string,
   room_id: string,
+  type: "room" | "task" | "workspace",
 ) {
-  const { data } = await supabase.from("user_passport").select("*").eq(
+  const { data, error } = await supabase.from("user_passport").select("*").eq(
     "user_id",
     user_id,
-  ).eq("room_id", room_id);
+  ).eq("room_id", room_id).eq("type", type);
+
+  if (error) console.log("checkPassportByRoomId error:::", error);
 
   return data && data.length > 0;
 }
+
 export async function setPassport(passport: any) {
   const { data, error } = await supabase.from("user_passport").insert(
     passport,
@@ -222,6 +245,7 @@ export async function createPassport(
   user_id: string,
   task_id?: string,
 ) {
+  console.log(select_izbushka, "select_izbushka");
   const { data: dataRoom, error: errorRoom } = await supabase
     .from("rooms")
     .select("*")
@@ -233,15 +257,19 @@ export async function createPassport(
     throw new Error(errorRoom.message);
   }
 
-  const isExistingPassport = await checkPassport(
+  const passportObj = await checkPassport(
     user_id,
     dataRoom.workspace_id,
     dataRoom.room_id,
     task_id,
   );
 
-  if (isExistingPassport) {
-    return isExistingPassport;
+  if (passportObj) {
+    return {
+      isExistingPassport: true,
+      passport_id: passportObj?.passport_id,
+      passport: passportObj?.passport,
+    };
   } else {
     const passport = [
       {
@@ -257,7 +285,7 @@ export async function createPassport(
         chat_id: dataRoom.chat_id,
       },
     ];
-    console.log(passport, "passport");
+
     const { data: dataPassport, error: errorPassport } = await supabase
       .from("user_passport")
       .insert(passport)
@@ -268,7 +296,11 @@ export async function createPassport(
       throw new Error(errorPassport.message);
     }
 
-    return dataPassport;
+    return {
+      isExistingPassport: true,
+      dataPassport,
+      passport_id: dataPassport[0].passport_id,
+    };
   }
 }
 
@@ -324,7 +356,7 @@ export async function resetProgress(
     .eq("username", username)
     .single();
 
-    console.log(userData, "userData")
+  console.log(userData, "userData");
   if (userError || !userData) {
     throw new Error(userError?.message || "User not found");
   }

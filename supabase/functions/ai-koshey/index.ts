@@ -6,7 +6,7 @@ import {
   GrammyError,
   HttpError,
   webhookCallback,
-} from "https://deno.land/x/grammy@v1.8.3/mod.ts";
+} from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 
 import {
   checkAndReturnUser,
@@ -21,36 +21,14 @@ import {
 } from "../_shared/utils/supabase.ts";
 
 import { getAiFeedback } from "../get-ai-feedback.ts";
-import { DEV } from "../_shared/utils/constants.ts";
+import { delay, DEV } from "../_shared/utils/constants.ts";
 import { createUser } from "../_shared/utils/nextapi/index.ts";
-
-if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY")) {
-  throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY is not set");
-}
-
-if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST")) {
-  throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST is not set");
-}
-
-if (!Deno.env.get("AI_KOSHEY_URL")) {
-  throw new Error("AI_KOSHEY_URL is not set");
-}
-
-if (!Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN")) {
-  throw new Error("AI_KOSHEY_FLOWISE_TOKEN is not set");
-}
-
-const aiKosheyUrl = Deno.env.get("AI_KOSHEY_URL");
-const aiKosheyFlowiseToken = Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN");
-
-const tokenProd = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY");
-const tokenTest = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST");
-
-const token = DEV ? tokenTest : tokenProd;
-
-const botAiKoshey = new Bot(token || "");
-
-const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
+import {
+  aiKosheyFlowiseToken,
+  aiKosheyUrl,
+  botAiKoshey,
+  botUsername,
+} from "../_shared/utils/telegram/bots.ts";
 
 export type CreateUserT = {
   id: number;
@@ -214,26 +192,45 @@ botAiKoshey.command("start", async (ctx: Context) => {
                           username,
                           first_name,
                           last_name,
-                          chat_id: izbushka.chat_id,
+                          chat_id: user.telegram_id,
                           type: "room",
                           is_owner: false,
                         };
                         console.log(passport_user, "passport_user");
                         try {
                           // проверить есть ли у юзера паспорт к этой избушке и не выдовать если есть
+                          console.log(user.user_id, "user.user_id");
+                          console.log(izbushka.room_id, "izbushka.room_id");
                           const isPassportExist = await checkPassportByRoomId(
                             user.user_id,
                             izbushka.room_id,
+                            "room",
                           );
+                          console.log(isPassportExist, "isPassportExist");
                           if (!isPassportExist) {
                             await setPassport(passport_user);
                           }
+
                           try {
+                            if (select_izbushka && username) {
+                              try {
+                                await setSelectedIzbushka(
+                                  username,
+                                  select_izbushka,
+                                );
+                              } catch (error) {
+                                await ctx.reply(
+                                  `🤔 Error: setSelectedIzbushka.\n${error}`,
+                                );
+                                throw new Error("Error: setSelectedIzbushka.");
+                              }
+                            }
                             await startIzbushka(ctx);
                           } catch (error) {
                             await ctx.reply(
                               `🤔 Error: startIzbushka.\n${error}`,
                             );
+
                             throw new Error("Error: setPassport.");
                           }
                         } catch (error) {
@@ -338,7 +335,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             telegram_id: message?.from?.id,
           };
           const newUser = await createUser(user);
-
+          await ctx.replyWithChatAction("typing");
           newUser && await ctx.reply(
             intro({ language_code }),
             {
@@ -430,6 +427,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             return acc;
           }, []);
         console.log(keyboard, "keyboard");
+        await ctx.replyWithChatAction("typing");
         if (type === "fire") {
           await ctx.reply(
             "🔥 Пламя горячее - это личные избушки, где твои слова пишутся и задачи создаются.",
@@ -525,20 +523,17 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   }
   if (callbackData.includes("select_izbushka")) {
     const select_izbushka = callbackData.split("_")[2];
-
+    console.log(select_izbushka, "select_izbushka");
     if (select_izbushka) {
       username && await setSelectedIzbushka(username, select_izbushka);
     }
 
-    setTimeout(async () => {
-      await ctx.reply(
-        `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
-      );
-      return;
-    }, 500);
-
     await ctx.reply(
       `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
+    );
+    await delay(500);
+    await ctx.reply(
+      `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
     );
     return;
   }
