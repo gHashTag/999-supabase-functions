@@ -1,6 +1,6 @@
 import { createCodes } from "../_shared/utils/100ms/create-codes.ts";
 import { corsHeaders } from "../_shared/corsHeaders.ts";
-import { client } from "../_shared/utils/client.ts";
+import { client } from "../_shared/utils/supabase/index.ts";
 // import { corsHeaders } from "../_shared/cors.ts";
 import { headers } from "../_shared/headers.ts";
 import { myHeaders } from "../_shared/utils/100ms/my-headers.ts";

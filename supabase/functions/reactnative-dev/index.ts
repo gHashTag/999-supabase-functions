@@ -8,13 +8,13 @@ import {
   resetProgress,
   updateProgress,
   updateResult,
-} from "../_shared/utils/supabase.ts";
+} from "../_shared/utils/supabase/index.ts";
 import { pathIncrement } from "../path-increment.ts";
 import { getAiFeedback } from "../get-ai-feedback.ts";
 import { checkSubscription } from "../check-subscription.ts";
 import {
   handleUpdateReactNative,
-  reactNativeDevBot
+  reactNativeDevBot,
 } from "../_shared/utils/telegram/bots.ts";
 import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
@@ -112,7 +112,7 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
         const {
           topic: ruTopic,
           image_lesson_url,
-          topic_en: enTopic
+          topic_en: enTopic,
         } = questions[0];
 
         const topic = isRu ? ruTopic : enTopic;
@@ -330,7 +330,8 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
             ctx: getQuestionContext,
             language,
           });
-          const { topic: ruTopic, image_lesson_url , topic_en: enTopic} = newQuestions[0];
+          const { topic: ruTopic, image_lesson_url, topic_en: enTopic } =
+            newQuestions[0];
           const topic = isRu ? ruTopic : enTopic;
           // Формируем сообщение
           const messageText =
@@ -387,7 +388,7 @@ reactNativeDevBot.catch((err) => {
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
-    console.log(req)
+    console.log(req);
     if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
       return new Response("not allowed", { status: 405 });
     }
@@ -397,4 +398,3 @@ Deno.serve(async (req) => {
     console.error(err);
   }
 });
-

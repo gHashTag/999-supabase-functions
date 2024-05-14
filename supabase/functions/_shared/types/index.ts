@@ -7,7 +7,7 @@ export interface CreateUserProps {
   language_code?: string;
   chat_id?: number;
   inviter?: string;
-  invitation_codes: string;
+  invitation_codes?: string;
   telegram_id?: number;
   email?: string;
   photo_url?: string;

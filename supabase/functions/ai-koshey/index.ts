@@ -1,34 +1,37 @@
 console.log(`Function "ai_kochey_bot" up and running!`);
 
 import {
-  Bot,
   Context,
   GrammyError,
   HttpError,
-  webhookCallback,
 } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 
-import {
-  checkAndReturnUser,
-  checkPassportByRoomId,
-  checkUsernameCodes,
-  getRooms,
-  getRoomsCopperPipes,
-  getRoomsWater,
-  getSelectIzbushkaId,
-  setPassport,
-  setSelectedIzbushka,
-} from "../_shared/utils/supabase.ts";
-
 import { getAiFeedback } from "../get-ai-feedback.ts";
-import { delay, DEV } from "../_shared/utils/constants.ts";
+import { delay } from "../_shared/utils/constants.ts";
 import { createUser } from "../_shared/utils/nextapi/index.ts";
 import {
   aiKosheyFlowiseToken,
   aiKosheyUrl,
   botAiKoshey,
   botUsername,
+  handleUpdateAiKoshey,
 } from "../_shared/utils/telegram/bots.ts";
+import {
+  checkAndReturnUser,
+  checkUsernameCodes,
+  setSelectedIzbushka,
+} from "../_shared/utils/supabase/users.ts";
+import {
+  getRooms,
+  getRoomsCopperPipes,
+  getRoomsWater,
+  getSelectIzbushkaId,
+} from "../_shared/utils/supabase/rooms.ts";
+import {
+  checkPassportByRoomId,
+  setPassport,
+} from "../_shared/utils/supabase/passport.ts";
+import { PassportUser, RoomNode } from "../_shared/utils/types/index.ts";
 
 export type CreateUserT = {
   id: number;
@@ -39,7 +42,7 @@ export type CreateUserT = {
   language_code: string;
   chat_id: number;
   inviter: string;
-  invitation_codes: string;
+  invitation_codes?: string;
   telegram_id: number;
   select_izbushka: string;
 };
@@ -125,7 +128,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
           const { isInviterExist, inviter_user_id, invitation_codes } =
             await checkUsernameCodes(inviter);
 
-          if (isInviterExist) {
+          if (isInviterExist && invitation_codes) {
             console.log(isInviterExist, "isInviterExist");
 
             const first_name = message?.from?.first_name;
@@ -134,7 +137,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
             if (username) {
               // Проверка существования пользователя и создание его, если его нет
               try {
-                const { isUserExist, user } = await checkAndReturnUser(
+                const { isUserExist } = await checkAndReturnUser(
                   username,
                 );
                 console.log(isUserExist, "isUserExist"); // Вывод информации о пользователе
@@ -184,8 +187,12 @@ botAiKoshey.command("start", async (ctx: Context) => {
                       const { izbushka } = await getSelectIzbushkaId(
                         select_izbushka,
                       );
-                      if (izbushka) {
-                        const passport_user = {
+                      if (
+                        izbushka && user && first_name && last_name &&
+                        user.telegram_id && izbushka.workspace_id &&
+                        user.photo_url
+                      ) {
+                        const passport_user: PassportUser = {
                           user_id: user.user_id,
                           workspace_id: izbushka.workspace_id,
                           room_id: izbushka.room_id,
@@ -195,6 +202,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
                           chat_id: user.telegram_id,
                           type: "room",
                           is_owner: false,
+                          photo_url: user.photo_url,
                         };
                         console.log(passport_user, "passport_user");
                         try {
@@ -280,7 +288,7 @@ botAiKoshey.command("start", async (ctx: Context) => {
   } else {
     if (username) {
       try {
-        const { isUserExist, user } = await checkAndReturnUser(
+        const { isUserExist } = await checkAndReturnUser(
           username,
         );
 
@@ -406,8 +414,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   const username = ctx.update && ctx.update.callback_query.from.username;
 
   const handleRoomSelection = async (
-    ctx: any,
-    rooms: any,
+    ctx: Context,
+    rooms: RoomNode[],
     type: string,
   ) => {
     console.log(callbackData, "callbackData");
@@ -415,17 +423,24 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       if (rooms && rooms.length > 0) {
         console.log(rooms, " handleRoomSelection rooms");
         const keyboard = rooms
-          .filter((room: any) => room)
-          .map((room: any) => ({
+          .filter((room: RoomNode) => room)
+          .map((room: RoomNode) => ({
             text: room.name,
             callback_data: `select_izbushka_${room.id}`,
           }))
-          .reduce((acc: any, curr: any, index: number) => {
-            const row = Math.floor(index / 1);
-            acc[row] = acc[row] || [];
-            acc[row].push(curr);
-            return acc;
-          }, []);
+          .reduce(
+            (
+              acc: { text: string; callback_data: string }[][],
+              curr: { text: string; callback_data: string },
+              index: number,
+            ) => {
+              const row = Math.floor(index / 1);
+              acc[row] = acc[row] || [];
+              acc[row].push(curr);
+              return acc;
+            },
+            [],
+          );
         console.log(keyboard, "keyboard");
         await ctx.replyWithChatAction("typing");
         if (type === "fire") {
@@ -459,24 +474,23 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         return;
       }
     } catch (error) {
-      console.error(error);
       await ctx.reply(`Ошибка при выборе избушки`, error);
-      return;
+      throw new Error("Ошибка при выборе избушки");
     }
   };
 
   if (callbackData === "fire") {
     const rooms = username && (await getRooms(username));
     console.log(rooms, "rooms fire");
-    await handleRoomSelection(ctx, rooms, "fire");
+    rooms && await handleRoomSelection(ctx, rooms, "fire");
   } else if (callbackData === "water") {
     const rooms = username && (await getRoomsWater(username));
     console.log(rooms, "rooms waters");
-    await handleRoomSelection(ctx, rooms, "water");
+    rooms && await handleRoomSelection(ctx, rooms, "water");
   } else if (callbackData === "copper_pipes") {
     const rooms = await getRoomsCopperPipes();
     console.log(rooms, "rooms copper_pipes");
-    await handleRoomSelection(ctx, rooms, "copper_pipes");
+    rooms && await handleRoomSelection(ctx, rooms, "copper_pipes");
   }
 
   if (callbackData === "name_izbushka") {
@@ -496,31 +510,40 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     const rooms = username && (await getRooms(username));
     // console.log(rooms, "rooms");
     try {
-      await ctx.reply("🏡 Выберите избушку", {
-        reply_markup: {
-          inline_keyboard: rooms
-            ? rooms
-              .filter((room) => room)
-              .map((room) => ({
+      if (Array.isArray(rooms)) {
+        await ctx.reply("🏡 Выберите избушку", {
+          reply_markup: {
+            inline_keyboard: rooms
+              .filter((room: RoomNode) => room)
+              .map((room: RoomNode) => ({
                 text: room.name,
                 callback_data: `select_izbushka_${room.id}`,
               }))
-              .reduce((acc, curr, index) => {
-                const row = Math.floor(index / 1); // Set the number of buttons in one row (here there are 2 buttons in a row)
-                acc[row] = acc[row] || [];
-                //@ts-ignore hide
-                acc[row].push(curr);
-                return acc;
-              }, [])
-            : [],
-        },
-      });
+              .reduce(
+                (
+                  acc: { text: string; callback_data: string }[][],
+                  curr,
+                  index,
+                ) => {
+                  const row = Math.floor(index / 1);
+                  acc[row] = acc[row] || [];
+                  acc[row].push(curr);
+                  return acc;
+                },
+                [],
+              ),
+          },
+        });
+      } else {
+        await ctx.reply("Ошибка: не удалось загрузить избушки.");
+      }
       return;
     } catch (error) {
       console.error("error show_izbushka", error);
       return;
     }
   }
+
   if (callbackData.includes("select_izbushka")) {
     const select_izbushka = callbackData.split("_")[2];
     console.log(select_izbushka, "select_izbushka");
@@ -563,8 +586,6 @@ botAiKoshey.catch((err) => {
   }
 });
 
-const handleUpdate = webhookCallback(botAiKoshey, "std/http");
-
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
@@ -572,7 +593,7 @@ Deno.serve(async (req) => {
       return new Response("not allowed", { status: 405 });
     }
 
-    return await handleUpdate(req);
+    return await handleUpdateAiKoshey(req);
   } catch (err) {
     console.error(err);
   }

@@ -1,7 +1,7 @@
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
-import { client, getWorkspaceById } from "../_shared/utils/client.ts";
+import { client, getWorkspaceById } from "../_shared/utils/supabase/index.ts";
 import { Bot } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 import { translateText } from "../_shared/utils/translateText.ts";
 
@@ -9,18 +9,26 @@ import { createChatCompletionJson } from "../_shared/utils/createChatCompletionJ
 import { corsHeaders } from "../_shared/corsHeaders.ts";
 import { headers } from "../_shared/headers.ts";
 import { createEmoji } from "../_shared/utils/createEmoji.ts";
+
+import { SITE_URL } from "../_shared/utils/constants.ts";
+import { supportRequest } from "../_shared/utils/telegram/bots.ts";
 import {
   createPassport,
   getPassportByRoomId,
-} from "../_shared/utils/supabase.ts";
-import { botAiKoshey, suport_chat_id } from "../_shared/utils/telegram/bots.ts";
+} from "../_shared/utils/supabase/passport.ts";
+import { getRoomById } from "../_shared/utils/supabase/rooms.ts";
+import { UserPassport } from "../_shared/utils/types/index.ts";
+import {
+  createTask,
+  updateTaskByPassport,
+} from "../_shared/utils/supabase/tasks.ts";
 
 type Task = {
+  id: string;
   user_id: string;
   first_name: string;
   last_name: string;
   username: string;
-
   title: string;
   description: string;
   chat_id: string;
@@ -35,14 +43,31 @@ interface Data {
   description: string;
 }
 
-async function sendTasksToTelegram(
-  tasks: Task[],
-  summary_short: string,
-  language_code: string,
-  token: string,
-  room_id: string,
-  chat_id: string,
-) {
+interface SendTasksToTelegramT {
+  username: string;
+  user_id: string;
+  workspace_id: string;
+  recording_id: string;
+  tasks: Task[];
+  summary_short: string;
+  language_code: string;
+  token: string;
+  room_id: string;
+  chat_id: string;
+}
+
+async function sendTasksToTelegram({
+  username,
+  user_id,
+  workspace_id,
+  recording_id,
+  tasks,
+  summary_short,
+  language_code,
+  token,
+  room_id,
+  chat_id,
+}: SendTasksToTelegramT) {
   const newTasks = tasks.map((task) => {
     const assignee = task.username === null
       ? ""
@@ -69,9 +94,12 @@ async function sendTasksToTelegram(
   console.log(passports, "passports");
 
   if (chat_id) {
+    const summary_short_url =
+      `${SITE_URL}/${username}/${user_id}/${workspace_id}/${room_id}/${recording_id}`;
+    console.log(summary_short_url, "summary_short_url");
     await bot.api.sendMessage(
       chat_id,
-      `🚀 ${translatedSummaryShort}`,
+      `🚀 ${translatedSummaryShort}\n\n${summary_short_url}`,
     );
   }
 
@@ -106,8 +134,8 @@ async function sendTasksToTelegram(
   }
 }
 
-const getPreparedUsers = (usersFromSupabase: any) => {
-  return usersFromSupabase.map((user: any) => {
+const getPreparedUsers = (usersFromSupabase: UserPassport[]) => {
+  return usersFromSupabase.map((user: UserPassport) => {
     const concatName = () => {
       if (!!user.first_name && !user.last_name) {
         return user?.first_name;
@@ -126,7 +154,7 @@ const getPreparedUsers = (usersFromSupabase: any) => {
   });
 };
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: { ...corsHeaders, ...headers } });
   }
@@ -173,12 +201,8 @@ Deno.serve(async (req) => {
         // Получаем прямую ссылку на текстовый файл транскрипции
         const transcriptTextPresignedUrl = data.transcript_txt_presigned_url;
 
-        if (suport_chat_id) {
-          await botAiKoshey.api.sendMessage(
-            suport_chat_id,
-            `🚀 transcription.success ${data}`,
-          );
-        }
+        await supportRequest("transcription.success", data);
+
         // Выполняем запрос к URL для получения текста транскрипции
         const transcriptResponse = await fetch(transcriptTextPresignedUrl);
 
@@ -237,19 +261,19 @@ Deno.serve(async (req) => {
           .select("*").eq("room_id", data.room_id).eq("type", "room");
 
         console.log(users, "user_passport");
+        if (users) {
+          const preparedUsers = getPreparedUsers(users);
+          console.log(preparedUsers, "preparedUsers");
 
-        const preparedUsers = getPreparedUsers(users);
-        console.log(preparedUsers, "preparedUsers");
-
-        const prompt = `add the 'user_id' from of ${
-          JSON.stringify(
-            preparedUsers,
-          )
-        } to the objects of the ${
-          JSON.stringify(
-            preparedTasks,
-          )
-        } array. (Example: [{
+          const prompt = `add the 'user_id' from of ${
+            JSON.stringify(
+              preparedUsers,
+            )
+          } to the objects of the ${
+            JSON.stringify(
+              preparedTasks,
+            )
+          } array. (Example: [{
             user_id: "1a1e4c75-830c-4fe8-a312-c901c8aa144b",
             first_name: "Andrey",
             last_name: "O",
@@ -260,100 +284,101 @@ Deno.serve(async (req) => {
             description: "Capture the Universe and a couple of stars in the Aldebaran constellation"
         }]) Provide your response as a JSON object and always response on English`;
 
-        // console.log(preparedTasks, "preparedTasks");
-        const tasks = await createChatCompletionJson(prompt);
-        const tasksArray = tasks && JSON.parse(tasks).tasks;
-        console.log(tasksArray, "tasksArray");
+          // console.log(preparedTasks, "preparedTasks");
+          const tasks = await createChatCompletionJson(prompt);
+          const tasksArray = tasks && JSON.parse(tasks).tasks;
+          console.log(tasksArray, "tasksArray");
 
-        if (Array.isArray(tasksArray)) {
-          const newTasks = tasksArray.map((task: any) => {
-            // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
-            if (!task.assignee.user_id) {
-              task.user_id = "28772cec-eba4-4375-a5a1-090bba2909fa";
-            }
-            return task;
-          });
+          if (Array.isArray(tasksArray)) {
+            const newTasks = tasksArray.map((task: Task) => {
+              // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
+              if (!task.user_id) {
+                task.user_id = "28772cec-eba4-4375-a5a1-090bba2909fa";
+              }
+              return task;
+            });
+            const roomData = await getRoomById(data.room_id);
+            console.log(roomData, "roomData");
+            const { language_code, id, token, description } = roomData;
 
-          const { data: roomData } = (await supabaseClient
-            .from("rooms")
-            .select("*")
-            .eq("room_id", data.room_id)) as { data: Data[]; error: any };
+            const workspace_id = description;
+            console.log(workspace_id, "workspace_id");
 
-          console.log(roomData, "roomData");
-          const { language_code, id, token, description } = roomData[0];
+            const workspace = await getWorkspaceById(workspace_id);
 
-          const workspace_id = description;
-          console.log(workspace_id, "workspace_id");
-
-          const workspace = await getWorkspaceById(workspace_id);
-
-          let workspace_name;
-          if (workspace) {
-            workspace_name = workspace[0].title;
-          } else {
-            // Обработка случая, когда объект равен null или пустой
-            console.log("workspace_name is null");
-          }
-          console.log(workspace_name, "workspace_name");
-          if (workspace_name) {
-            for (const task of newTasks) {
-              // Убедитесь, что userId существует и не равен null
-              const user_id = task?.assignee?.user_id;
-              // console.log(data.room_id, "data.room_id");
-
-              const { dataPassport, passport_id } = await createPassport(
-                "task",
-                id,
-                task.first_name,
-                task.last_name,
-                task.username,
-                task.user_id,
-                task.id,
+            let workspace_name;
+            if (workspace) {
+              workspace_name = workspace[0].title;
+            } else {
+              // Обработка случая, когда объект равен null или пустой
+              return new Response( // строка 217
+                JSON.stringify({ message: "workspace_name is null" }),
+                { status: 200, headers: { ...corsHeaders } },
               );
-              console.log(dataPassport, "dataPassport");
-              if (dataPassport && dataPassport.length > 0) {
-                const taskData = await supabaseClient.from("tasks").insert([
-                  {
-                    user_id,
-                    room_id: data.room_id,
-                    workspace_id,
-                    recording_id: data.recording_id,
-                    title: task.title,
-                    description: task.description,
-                    workspace_name,
-                    chat_id: data.telegram_id,
-                    passport_id,
-                  },
-                ]).select("*");
+            }
+            console.log(workspace_name, "workspace_name");
+            if (workspace_name) {
+              for (const task of newTasks) {
+                // Убедитесь, что userId существует и не равен null
+                const user_id = task?.user_id;
+                console.log(data.room_id, "data.room_id");
+                const taskData = await createTask({
+                  user_id,
+                  room_id: data.room_id,
+                  workspace_id,
+                  recording_id: data.recording_id,
+                  title: task.title,
+                  description: task.description,
+                  workspace_name,
+                  chat_id: data.telegram_id,
+                });
                 console.log(taskData, "taskData");
-                if (taskData.error?.message) {
-                  console.log("Error:", taskData.error.message);
-                }
-                sendTasksToTelegram(
-                  newTasks,
+                const result = await createPassport({
+                  type: "task",
+                  select_izbushka: id,
+                  first_name: task.first_name,
+                  last_name: task.last_name,
+                  username: task.username,
+                  user_id: task.user_id,
+                  task_id: taskData.id,
+                });
+                console.log(result, "result");
+
+                const updateTaskData = await updateTaskByPassport({
+                  id: taskData.id,
+                  passport_id: result.passport_id,
+                });
+                console.log(updateTaskData, "updateTaskData");
+
+                await sendTasksToTelegram({
+                  username: data.username,
+                  user_id: data.user_id,
+                  workspace_id: data.workspace_id,
+                  recording_id: data.recording_id,
+                  tasks: newTasks,
                   summary_short,
                   language_code,
                   token,
-                  data.room_id,
-                  data.telegram_id,
-                ).catch(console.error);
-              } else {
-                return new Response(
-                  JSON.stringify({
-                    message: "passport is null",
-                  }),
-                  {
-                    status: 200,
-                    headers: { ...corsHeaders },
-                  },
-                );
+                  room_id: data.room_id,
+                  chat_id: data.telegram_id,
+                }).catch(console.error);
               }
             }
+          } else {
+            return new Response(
+              JSON.stringify({
+                message: "workspace_name is null",
+              }),
+              {
+                status: 200,
+                headers: { ...corsHeaders },
+              },
+            );
           }
-        } else {
+
           return new Response(
             JSON.stringify({
-              message: "workspace_name is null",
+              message: "Event processed successfully",
             }),
             {
               status: 200,
@@ -361,16 +386,6 @@ Deno.serve(async (req) => {
             },
           );
         }
-
-        return new Response(
-          JSON.stringify({
-            message: "Event processed successfully",
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders },
-          },
-        );
       }
     } else {
       return new Response(
@@ -393,6 +408,7 @@ Deno.serve(async (req) => {
       },
     );
   }
+  return new Response("Endpoint not found", { status: 404 });
 });
 
 // const transcriptionText =

@@ -55,7 +55,8 @@ export const aiKosheyFlowiseToken = Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN");
 
 const tokenProd = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY");
 const tokenTest = Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST");
-export const suport_chat_id = Deno.env.get("SUPPORT_CHAT_ID");
+export const supportChatId = Deno.env.get("SUPPORT_CHAT_ID");
+export const logBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN_LOG");
 
 export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
 
@@ -63,8 +64,23 @@ const token = DEV ? tokenTest : tokenProd;
 
 export const botAiKoshey = new Bot(token || "");
 
+export const logBot = new Bot(logBotToken || "");
+
+export const supportRequest = async (title: string, data: any) => {
+  try {
+    if (supportChatId) {
+      await logBot.api.sendMessage(
+        supportChatId,
+        `🚀 ${title}\n\n${JSON.stringify(data)}`,
+      );
+    }
+  } catch (error) {
+    console.log(error, "supportRequest error");
+  }
+};
+
 // handleUpdate
-// export const handleUpdateAiKoshey = webhookCallback(botAiKoshey, "std/http");
+export const handleUpdateAiKoshey = webhookCallback(botAiKoshey, "std/http");
 
 export const handleUpdateJavaScript = webhookCallback(
   javaScriptDevBot,

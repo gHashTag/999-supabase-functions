@@ -1,4 +1,4 @@
-import { client } from "../_shared/utils/client.ts";
+import { client } from "../_shared/utils/supabase/index.ts";
 
 Deno.serve(async (req) => {
   const supabaseClient = client();
