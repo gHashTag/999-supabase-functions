@@ -93,9 +93,14 @@ export interface UserPassport {
 }
 
 export interface CheckPassportResult {
+  passport?: UserPassport[];
+  passport_id?: string;
+}
+
+export interface CheckPassportIsExistingResult {
   isExistingPassport: boolean;
-  passport: UserPassport[];
-  passport_id: string;
+  passport?: UserPassport[];
+  passport_id?: string;
 }
 
 // WORKSPACES

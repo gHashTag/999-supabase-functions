@@ -1,4 +1,5 @@
 import {
+  CheckPassportIsExistingResult,
   CheckPassportResult,
   PassportUser,
   UserPassport,
@@ -32,7 +33,9 @@ interface CreatePassport {
   last_name: string;
   username: string;
   user_id: string;
-  task_id?: string;
+  is_owner: boolean;
+  recording_id: string;
+  task_id: string;
 }
 
 export async function createPassport({
@@ -42,7 +45,9 @@ export async function createPassport({
   last_name,
   username,
   user_id,
+  is_owner,
   task_id,
+  recording_id,
 }: CreatePassport): Promise<CheckPassportResult> {
   try {
     const { data: dataRoom, error: errorRoom } = await supabase
@@ -55,52 +60,37 @@ export async function createPassport({
       throw new Error("Error createPassport: " + errorRoom);
     }
 
-    const passportObj = await checkPassport(
-      user_id,
-      dataRoom.workspace_id,
-      dataRoom.room_id,
-      task_id,
-    );
-    console.log(passportObj, "passportObj");
-    if (passportObj) {
-      return {
-        isExistingPassport: true,
-        passport_id: passportObj.passport_id,
-        passport: passportObj.passport,
-      };
-    } else {
-      const passport: UserPassport[] = [
-        {
-          username,
-          user_id,
-          workspace_id: dataRoom.workspace_id,
-          room_id: dataRoom.room_id,
-          first_name,
-          last_name,
-          type,
-          is_owner: false,
-          photo_url: "",
-          chat_id: dataRoom.chat_id,
-        },
-      ];
-
-      const { data: dataPassport, error: errorPassport } = await supabase
-        .from("user_passport")
-        .insert(passport)
-        .select("*");
-      console.log(dataPassport, "dataPassport");
-      if (errorPassport) {
-        throw new Error(errorPassport.message);
-      }
-
-      return {
-        isExistingPassport: true,
-        passport: dataPassport,
-        passport_id: dataPassport[0].passport_id,
-      };
+    const passport: UserPassport[] = [
+      {
+        username,
+        user_id,
+        workspace_id: dataRoom.workspace_id,
+        room_id: dataRoom.room_id,
+        first_name,
+        last_name,
+        type,
+        is_owner,
+        task_id,
+        recording_id,
+        photo_url: "",
+        chat_id: dataRoom.chat_id,
+      },
+    ];
+    console.log(passport, "checkPassport passport");
+    const { data: dataPassport, error: errorPassport } = await supabase
+      .from("user_passport")
+      .insert(passport)
+      .select("*");
+    console.log(dataPassport, "checkPassport dataPassport");
+    if (errorPassport) {
+      throw new Error(errorPassport.message);
     }
+    return {
+      passport: dataPassport,
+      passport_id: dataPassport[0].passport_id,
+    };
   } catch (error) {
-    throw new Error("Error createPassport: " + error);
+    throw new Error("throw createPassport: " + error);
   }
 }
 
@@ -109,7 +99,7 @@ export const checkPassport = async (
   workspace_id: string,
   room_id: string,
   task_id?: string,
-): Promise<CheckPassportResult> => {
+): Promise<CheckPassportIsExistingResult> => {
   try {
     console.log(
       user_id,
@@ -125,15 +115,20 @@ export const checkPassport = async (
       .eq("workspace_id", workspace_id)
       .eq("room_id", room_id)
       .eq("task_id", task_id)
-      .eq("is_owner", false);
+      .eq("is_owner", false).single();
     console.log(existingPassport, "existingPassport");
     if (error) {
       throw new Error("Error checkPassport: " + error);
+    }
+    if (existingPassport) {
+      return {
+        isExistingPassport: true,
+        passport: existingPassport,
+        passport_id: existingPassport.passport_id,
+      };
     } else {
       return {
-        isExistingPassport: existingPassport.length > 0,
-        passport: existingPassport,
-        passport_id: existingPassport[0]?.passport_id,
+        isExistingPassport: false,
       };
     }
   } catch (error) {
@@ -143,7 +138,7 @@ export const checkPassport = async (
 
 export async function getPassportByRoomId(
   room_id: string,
-): Promise<UserPassport[]> {
+): Promise<PassportUser[]> {
   try {
     const { data, error } = await supabase.from("user_passport")
       .select("*")

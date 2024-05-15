@@ -9,6 +9,7 @@ interface CreateTask {
   description: string;
   workspace_name: string;
   chat_id: string;
+  translated_text: string;
 }
 
 export type TaskStatus = "todo" | "in_progress" | "done" | "archived";
@@ -34,6 +35,7 @@ export type TaskNode = {
   workspace_id: string;
   cost: string;
   is_public: boolean;
+  translated_text: string;
 };
 
 export const createTask = async ({
@@ -45,6 +47,7 @@ export const createTask = async ({
   description,
   workspace_name,
   chat_id,
+  translated_text,
 }: CreateTask): Promise<TaskNode> => {
   try {
     const { data: taskData, error: taskError } = await supabase.from("tasks")
@@ -58,6 +61,7 @@ export const createTask = async ({
           description,
           workspace_name,
           chat_id,
+          translated_text,
         },
       ]).select("*");
 
@@ -82,10 +86,14 @@ export const updateTaskByPassport = async ({
   id: string;
   passport_id: string;
 }) => {
+  console.log(id, "id");
+  console.log(passport_id, "passport_id");
+
   const { data: updateTaskData, error: updateTaskError } = await supabase
     .from("tasks")
     .update({ passport_id })
-    .eq("id", id);
+    .eq("id", id)
+    .select("*");
 
   if (updateTaskError) {
     throw new Error("Error updateTaskByPassport: " + updateTaskError);

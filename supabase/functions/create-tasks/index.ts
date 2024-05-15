@@ -17,7 +17,7 @@ import {
   getPassportByRoomId,
 } from "../_shared/utils/supabase/passport.ts";
 import { getRoomById } from "../_shared/utils/supabase/rooms.ts";
-import { UserPassport } from "../_shared/utils/types/index.ts";
+import { PassportUser } from "../_shared/utils/types/index.ts";
 import {
   createTask,
   updateTaskByPassport,
@@ -34,108 +34,41 @@ type Task = {
   chat_id: string;
 };
 
-interface Data {
-  id: string;
-  room_id: string;
-  language_code: string;
-  chat_id: number;
-  token: string;
-  description: string;
-}
-
 interface SendTasksToTelegramT {
   username: string;
-  user_id: string;
-  workspace_id: string;
-  recording_id: string;
-  tasks: Task[];
-  summary_short: string;
-  language_code: string;
+  first_name: string;
+  last_name: string;
+  translated_text: string;
   token: string;
   room_id: string;
-  chat_id: string;
+  passports: PassportUser[];
 }
 
 async function sendTasksToTelegram({
   username,
-  user_id,
-  workspace_id,
-  recording_id,
-  tasks,
-  summary_short,
-  language_code,
+  first_name,
+  last_name,
+  translated_text,
   token,
-  room_id,
-  chat_id,
+  passports,
 }: SendTasksToTelegramT) {
-  const newTasks = tasks.map((task) => {
-    const assignee = task.username === null
-      ? ""
-      : `${task.first_name} ${task.last_name || ""} (@${task.username})`;
-    console.log(assignee, "assignee");
-    return {
-      title: task.title,
-      description: task.description,
-      assignee,
-      chat_id: task.chat_id,
-    };
-  });
-
-  console.log(newTasks, "newTasks");
-  let translatedSummaryShort = summary_short;
-
-  if (language_code !== "en") {
-    translatedSummaryShort = await translateText(summary_short, language_code);
-  }
-
-  const bot = new Bot(token);
-
-  const passports = await getPassportByRoomId(room_id);
-  console.log(passports, "passports");
-
-  if (chat_id) {
-    const summary_short_url =
-      `${SITE_URL}/${username}/${user_id}/${workspace_id}/${room_id}/${recording_id}`;
-    console.log(summary_short_url, "summary_short_url");
-    await bot.api.sendMessage(
-      chat_id,
-      `🚀 ${translatedSummaryShort}\n\n${summary_short_url}`,
-    );
-  }
+  const assignee = username === null
+    ? ""
+    : `${first_name} ${last_name || ""} (@${username})`;
 
   if (passports && passports.length > 0) {
-    // Переводим все задачи один раз
-    const translatedTasks = language_code !== "en"
-      ? await Promise.all(newTasks.map(async (task) => {
-        const translatedText = await translateText(
-          `${task.title}\n${task.description}`,
-          language_code,
-        );
-        return {
-          ...task,
-          translatedText,
-        };
-      }))
-      : newTasks.map((task) => ({
-        ...task,
-        translatedText: `${task.title}\n${task.description}`, // Используем оригинальный текст для английского языка
-      }));
-
-    console.log(translatedTasks, "translatedTasks");
-    console.log(passports, "passports");
-    // Отправляем переведенные задачи каждому паспорту
-
-    for (const task of translatedTasks) {
+    const bot = new Bot(token);
+    for (const passport of passports) {
       await bot.api.sendMessage(
-        task.chat_id,
-        `${task.translatedText}\n${task.assignee}`,
+        passport.chat_id,
+        `${translated_text}\n${assignee}`,
       );
     }
   }
 }
 
-const getPreparedUsers = (usersFromSupabase: UserPassport[]) => {
-  return usersFromSupabase.map((user: UserPassport) => {
+const getPreparedUsers = (usersFromSupabase: PassportUser[]) => {
+  return usersFromSupabase.map((user: PassportUser) => {
     const concatName = () => {
       if (!!user.first_name && !user.last_name) {
         return user?.first_name;
@@ -215,7 +148,7 @@ Deno.serve(async (req: Request) => {
           throw new Error("Не удалось получить transcriptJSONResponse");
         }
         const summaryResponse = await summaryJSONResponse.json();
-        // console.log(summaryResponse, "summaryResponse");
+        console.log(summaryResponse, "summaryResponse");
         const summarySection = summaryResponse.sections.find(
           (section: {
             title: string;
@@ -224,7 +157,7 @@ Deno.serve(async (req: Request) => {
             paragraph: string;
           }) => section.title === "Short Summary",
         );
-
+        console.log(summarySection, "summarySection");
         const summary_short = summarySection ? summarySection.paragraph : "";
 
         const titleWithEmoji = await createEmoji(
@@ -289,6 +222,8 @@ Deno.serve(async (req: Request) => {
           const tasksArray = tasks && JSON.parse(tasks).tasks;
           console.log(tasksArray, "tasksArray");
 
+          const roomData = await getRoomById(data.room_id);
+
           if (Array.isArray(tasksArray)) {
             const newTasks = tasksArray.map((task: Task) => {
               // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
@@ -317,8 +252,64 @@ Deno.serve(async (req: Request) => {
               );
             }
             console.log(workspace_name, "workspace_name");
+            const { room_id, recording_id } = data;
+            let translated_short = summary_short;
+            if (room_id) {
+              console.log(translated_short, "translated_short");
+
+              if (language_code !== "en") {
+                translated_short = await translateText(
+                  summary_short,
+                  language_code,
+                );
+              }
+            }
+            console.log(language_code, "language_code");
+            const translatedTasks = language_code !== "en"
+              ? await Promise.all(newTasks.map(async (task) => {
+                const translated_text = await translateText(
+                  `${task.title}\n${task.description}`,
+                  language_code,
+                );
+                console.log(translated_text, "translated_text");
+                return {
+                  ...task,
+                  translated_text,
+                };
+              }))
+              : newTasks.map((task) => ({
+                ...task,
+                translated_text: `${task.title}\n${task.description}`,
+              }));
+            console.log(translatedTasks, "translatedTasks");
+            const passports = await getPassportByRoomId(room_id);
+            for (const passport of passports) {
+              const summary_short_url =
+                `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;
+
+              console.log(summary_short_url, "summary_short_url");
+              const bot = new Bot(token);
+              await bot.api.sendMessage(
+                passport.chat_id,
+                `🚀 ${translated_short}`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        {
+                          text: language_code === "ru"
+                            ? "Открыть встречу"
+                            : "Open meet",
+                          url: summary_short_url,
+                        },
+                      ],
+                    ],
+                  },
+                },
+              );
+            }
             if (workspace_name) {
-              for (const task of newTasks) {
+              for (const task of translatedTasks) {
                 // Убедитесь, что userId существует и не равен null
                 const user_id = task?.user_id;
                 console.log(data.room_id, "data.room_id");
@@ -330,7 +321,8 @@ Deno.serve(async (req: Request) => {
                   title: task.title,
                   description: task.description,
                   workspace_name,
-                  chat_id: data.telegram_id,
+                  chat_id: roomData.chat_id,
+                  translated_text: task.translated_text,
                 });
                 console.log(taskData, "taskData");
                 const result = await createPassport({
@@ -340,28 +332,28 @@ Deno.serve(async (req: Request) => {
                   last_name: task.last_name,
                   username: task.username,
                   user_id: task.user_id,
+                  is_owner: true,
                   task_id: taskData.id,
+                  recording_id,
                 });
                 console.log(result, "result");
+                if (result.passport_id) {
+                  const updateTaskData = await updateTaskByPassport({
+                    id: taskData.id,
+                    passport_id: result.passport_id,
+                  });
+                  console.log(updateTaskData, "updateTaskData");
 
-                const updateTaskData = await updateTaskByPassport({
-                  id: taskData.id,
-                  passport_id: result.passport_id,
-                });
-                console.log(updateTaskData, "updateTaskData");
-
-                await sendTasksToTelegram({
-                  username: data.username,
-                  user_id: data.user_id,
-                  workspace_id: data.workspace_id,
-                  recording_id: data.recording_id,
-                  tasks: newTasks,
-                  summary_short,
-                  language_code,
-                  token,
-                  room_id: data.room_id,
-                  chat_id: data.telegram_id,
-                }).catch(console.error);
+                  await sendTasksToTelegram({
+                    username: roomData.username,
+                    first_name: task.first_name,
+                    last_name: task.last_name,
+                    translated_text: task.translated_text,
+                    token,
+                    room_id: data.room_id,
+                    passports,
+                  }).catch(console.error);
+                }
               }
             }
           } else {
