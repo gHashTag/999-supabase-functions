@@ -356,24 +356,25 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       }
       // Обрабатываем ответ пользовател
     } else {
-      const query = ctx?.message?.text;
-      console.log(query, "query");
-      try {
-        if (query && aiKosheyUrl) {
-          const endpoint =
-            `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
-          console.log(endpoint, "endpoint");
-          const feedback = await getAiFeedbackFromSupabase({
-            query,
-            endpoint: endpoint,
-          });
-          await ctx.reply(feedback, { parse_mode: "Markdown" });
-          return;
-        }
-      } catch (error) {
-        console.error("Ошибка при получении ответа AI:", error);
-        return;
-      }
+      // const query = ctx?.message?.text;
+      // console.log(query, "query");
+      // try {
+      //   if (query && aiKosheyUrl) {
+      //     const endpoint =
+      //       `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
+
+      //     const { content } = await getAiFeedbackFromSupabase({
+      //       query,
+      //       endpoint: endpoint,
+      //     });
+      //     console.log(content, "content");
+      //     await ctx.reply(content, { parse_mode: "Markdown" });
+      //     return;
+      //   }
+      // } catch (error) {
+      //   console.error("Ошибка при получении ответа AI:", error);
+      //   return;
+      // }
       return;
     }
   } else {
@@ -382,15 +383,23 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
     console.log(query, "query");
     try {
       if (query && aiKosheyUrl) {
-        const endpoint =
-          `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
-        console.log(endpoint, "endpoint");
-        const feedback = await getAiFeedbackFromSupabase({
-          query,
-          endpoint: endpoint,
-        });
-        await ctx.reply(feedback, { parse_mode: "Markdown" });
-        return;
+        try {
+          if (query && aiKosheyUrl) {
+            const endpoint =
+              `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
+
+            const { content } = await getAiFeedbackFromSupabase({
+              query,
+              endpoint: endpoint,
+            });
+            console.log(content, "content");
+            await ctx.reply(content, { parse_mode: "Markdown" });
+            return;
+          }
+        } catch (error) {
+          console.error("Ошибка при получении ответа AI:", error);
+          return;
+        }
       }
     } catch (error) {
       console.error("Ошибка при получении ответа AI:", error);
@@ -616,3 +625,5 @@ Deno.serve(async (req) => {
     console.error(err);
   }
 });
+
+// supabase functions deploy ai-koshey --no-verify-jwt
