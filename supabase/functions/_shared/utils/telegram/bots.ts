@@ -50,6 +50,10 @@ if (!Deno.env.get("SUPPORT_CHAT_ID")) {
   throw new Error("SUPPORT_CHAT_ID is not set");
 }
 
+if (!Deno.env.get("TELEGRAM_BOT_TOKEN_LOG")) {
+  throw new Error("TELEGRAM_BOT_TOKEN_LOG is not set");
+}
+
 export const aiKosheyUrl = Deno.env.get("AI_KOSHEY_URL");
 export const aiKosheyFlowiseToken = Deno.env.get("AI_KOSHEY_FLOWISE_TOKEN");
 

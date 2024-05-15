@@ -136,132 +136,104 @@ botAiKoshey.command("start", async (ctx: Context) => {
 
             if (username) {
               // Проверка существования пользователя и создание его, если его нет
-              try {
-                const { isUserExist } = await checkAndReturnUser(
-                  username,
-                );
-                console.log(isUserExist, "isUserExist"); // Вывод информации о пользователе
 
-                if (!isUserExist) {
-                  console.log("!isUserExist");
-                  console.log(
+              const { isUserExist } = await checkAndReturnUser(
+                username,
+              );
+              console.log(isUserExist, "isUserExist"); // Вывод информации о пользователе
+
+              if (!isUserExist) {
+                console.log("!isUserExist");
+                console.log(
+                  first_name,
+                  last_name,
+                  username,
+                  message?.from?.id,
+                  message?.from?.is_bot,
+                  message?.from?.language_code,
+                  message?.chat?.id,
+                );
+                if (
+                  first_name && last_name && username &&
+                  message?.from?.id &&
+                  message?.from?.language_code && message?.chat?.id
+                ) {
+                  const userObj: CreateUserT = {
+                    id: message?.from?.id,
+                    username,
                     first_name,
                     last_name,
-                    username,
-                    message?.from?.id,
-                    message?.from?.is_bot,
-                    message?.from?.language_code,
-                    message?.chat?.id,
+                    is_bot: message?.from?.is_bot,
+                    language_code: message?.from?.language_code,
+                    chat_id: message?.chat?.id,
+                    inviter: inviter_user_id,
+                    invitation_codes,
+                    telegram_id: message?.from?.id,
+                    select_izbushka,
+                  };
+                  console.log(userObj, "userObj");
+                  const newUser = await createUser(userObj);
+                  console.log(newUser, "newUser");
+
+                  await welcomeMenu(ctx);
+                  return;
+                }
+              } else {
+                const { isUserExist, user } = await checkAndReturnUser(
+                  username,
+                );
+                if (isUserExist) {
+                  console.log(select_izbushka, "select_izbushka");
+                  const { izbushka } = await getSelectIzbushkaId(
+                    select_izbushka,
                   );
+                  console.log(izbushka, "izbushka");
                   if (
-                    first_name && last_name && username &&
-                    message?.from?.id &&
-                    message?.from?.language_code && message?.chat?.id
+                    izbushka && user && first_name && last_name &&
+                    user.telegram_id && izbushka.workspace_id
                   ) {
-                    const userObj: CreateUserT = {
-                      id: message?.from?.id,
+                    const passport_user: PassportUser = {
+                      user_id: user.user_id,
+                      workspace_id: izbushka.workspace_id,
+                      room_id: izbushka.room_id,
                       username,
                       first_name,
                       last_name,
-                      is_bot: message?.from?.is_bot,
-                      language_code: message?.from?.language_code,
-                      chat_id: message?.chat?.id,
-                      inviter: inviter_user_id,
-                      invitation_codes,
-                      telegram_id: message?.from?.id,
-                      select_izbushka,
+                      chat_id: user.telegram_id,
+                      type: "room",
+                      is_owner: false,
+                      photo_url: user.photo_url || null,
                     };
-                    console.log(userObj, "userObj");
-                    const newUser = await createUser(userObj);
-                    console.log(newUser, "newUser");
+                    console.log(passport_user, "passport_user");
 
-                    await welcomeMenu(ctx);
-                    return;
-                  }
-                } else {
-                  const { isUserExist, user } = await checkAndReturnUser(
-                    username,
-                  );
-                  if (isUserExist) {
-                    try {
-                      const { izbushka } = await getSelectIzbushkaId(
+                    // проверить есть ли у юзера паспорт к этой избушке и не выдовать если есть
+                    console.log(user.user_id, "user.user_id");
+                    console.log(izbushka.room_id, "izbushka.room_id");
+                    const isPassportExist = await checkPassportByRoomId(
+                      user.user_id,
+                      izbushka.room_id,
+                      "room",
+                    );
+                    console.log(isPassportExist, "isPassportExist");
+                    if (!isPassportExist) {
+                      await setPassport(passport_user);
+                    }
+
+                    if (select_izbushka && username) {
+                      await setSelectedIzbushka(
+                        username,
                         select_izbushka,
                       );
-                      if (
-                        izbushka && user && first_name && last_name &&
-                        user.telegram_id && izbushka.workspace_id &&
-                        user.photo_url
-                      ) {
-                        const passport_user: PassportUser = {
-                          user_id: user.user_id,
-                          workspace_id: izbushka.workspace_id,
-                          room_id: izbushka.room_id,
-                          username,
-                          first_name,
-                          last_name,
-                          chat_id: user.telegram_id,
-                          type: "room",
-                          is_owner: false,
-                          photo_url: user.photo_url,
-                        };
-                        console.log(passport_user, "passport_user");
-                        try {
-                          // проверить есть ли у юзера паспорт к этой избушке и не выдовать если есть
-                          console.log(user.user_id, "user.user_id");
-                          console.log(izbushka.room_id, "izbushka.room_id");
-                          const isPassportExist = await checkPassportByRoomId(
-                            user.user_id,
-                            izbushka.room_id,
-                            "room",
-                          );
-                          console.log(isPassportExist, "isPassportExist");
-                          if (!isPassportExist) {
-                            await setPassport(passport_user);
-                          }
-
-                          try {
-                            if (select_izbushka && username) {
-                              try {
-                                await setSelectedIzbushka(
-                                  username,
-                                  select_izbushka,
-                                );
-                              } catch (error) {
-                                await ctx.reply(
-                                  `🤔 Error: setSelectedIzbushka.\n${error}`,
-                                );
-                                throw new Error("Error: setSelectedIzbushka.");
-                              }
-                            }
-                            await startIzbushka(ctx);
-                          } catch (error) {
-                            await ctx.reply(
-                              `🤔 Error: startIzbushka.\n${error}`,
-                            );
-
-                            throw new Error("Error: setPassport.");
-                          }
-                        } catch (error) {
-                          await ctx.reply(`🤔 Error: setPassport.\n${error}`);
-                          throw new Error("Error: setPassport.");
-                        }
-                      } else {
-                        await ctx.reply(
-                          `🤔 Error: getSelectIzbushkaId.\n${izbushka}`,
-                        );
-                        throw new Error("Error: getSelectIzbushkaId.");
-                      }
-                      return;
-                    } catch (error) {
-                      await ctx.reply(
-                        `🤔Error: getSelectIzbushkaId.\n${error}`,
-                      );
-                      throw new Error("Error: getSelectIzbushkaId.");
                     }
+                    await startIzbushka(ctx);
+                  } else {
+                    await ctx.reply(
+                      `🤔 Error: getSelectIzbushkaId.\n${izbushka}`,
+                    );
+                    throw new Error("Error: getSelectIzbushkaId.");
                   }
+                  return;
                 }
-              } catch (error) {
-                console.error(error, "error createNewPassport");
               }
             }
           }

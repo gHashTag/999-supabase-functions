@@ -17,11 +17,15 @@ import {
   getPassportByRoomId,
 } from "../_shared/utils/supabase/passport.ts";
 import { getRoomById } from "../_shared/utils/supabase/rooms.ts";
-import { PassportUser } from "../_shared/utils/types/index.ts";
+import {
+  PassportUser,
+  TranscriptionAsset,
+} from "../_shared/utils/types/index.ts";
 import {
   createTask,
   updateTaskByPassport,
 } from "../_shared/utils/supabase/tasks.ts";
+import { setRoomAsset } from "../_shared/utils/supabase/room_assets.ts";
 
 type Task = {
   id: string;
@@ -164,22 +168,15 @@ Deno.serve(async (req: Request) => {
           summary_short,
         );
 
-        const roomAsset = {
+        const roomAsset: TranscriptionAsset = {
           ...data,
           title: titleWithEmoji,
           summary_short,
           transcription,
+          workspace_id: data.workspace_id,
+          user_id: data.user_id,
         };
-        console.log(roomAsset, "roomAsset");
-        const { error: errorInsertRoomAsset } = await supabaseClient
-          .from("room_assets")
-          .insert([roomAsset]);
-
-        if (errorInsertRoomAsset) {
-          throw new Error(
-            `Asset creation failed: ${errorInsertRoomAsset.message}`,
-          );
-        }
+        await setRoomAsset(roomAsset);
 
         const systemPrompt =
           `Answer with emoticons. You are an AI assistant working at dao999nft. Your goal is to extract all tasks from the text, the maximum number of tasks, the maximum number of tasks, the maximum number of tasks, the maximum number of tasks, the maximum number of tasks, assign them to executors using the colon sign: assignee, title,  description (Example: <b>Ai Koshey</b>: 💻 Develop functional requirements) If no tasks are detected, add one task indicating that no tasks were found. Provide your response as a JSON object`;
@@ -221,8 +218,6 @@ Deno.serve(async (req: Request) => {
           const tasks = await createChatCompletionJson(prompt);
           const tasksArray = tasks && JSON.parse(tasks).tasks;
           console.log(tasksArray, "tasksArray");
-
-          const roomData = await getRoomById(data.room_id);
 
           if (Array.isArray(tasksArray)) {
             const newTasks = tasksArray.map((task: Task) => {
@@ -345,7 +340,7 @@ Deno.serve(async (req: Request) => {
                   console.log(updateTaskData, "updateTaskData");
 
                   await sendTasksToTelegram({
-                    username: roomData.username,
+                    username: task.username,
                     first_name: task.first_name,
                     last_name: task.last_name,
                     translated_text: task.translated_text,
