@@ -4,7 +4,7 @@ import {
   Context,
   GrammyError,
   HttpError,
-} from "https://deno.land/x/grammy@v1.22.4/mod.ts";
+} from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
 import { getAiFeedback } from "../get-ai-feedback.ts";
 import { delay } from "../_shared/utils/constants.ts";

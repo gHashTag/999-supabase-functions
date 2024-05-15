@@ -16,8 +16,8 @@ import {
   handleUpdateTypeScript,
   typeScriptDevBot,
 } from "../_shared/utils/telegram/bots.ts";
-import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
-import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
+import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
+import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
 
 typeScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");

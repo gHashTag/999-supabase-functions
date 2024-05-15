@@ -6,7 +6,7 @@ import {
   GrammyError,
   HttpError,
   webhookCallback,
-} from "https://deno.land/x/grammy@v1.22.4/mod.ts";
+} from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
 import {
   checkUsernameCodes,
