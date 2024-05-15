@@ -1,17 +1,13 @@
-interface getAiFeedbackT {
-  query: string;
-  endpoint: string;
-  token: string;
-}
+import { headers } from "./_shared/utils/constants.ts";
+import { getAiFeedbackT } from "./_shared/utils/types/index.ts";
 
-async function getAiFeedback({ query, endpoint, token }: getAiFeedbackT) {
+export async function getAiFeedbackFromSupabase(
+  { query, endpoint }: getAiFeedbackT,
+) {
   const response = await fetch(
     endpoint,
     {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       method: "POST",
       body: JSON.stringify({ question: query }),
     },
@@ -20,5 +16,3 @@ async function getAiFeedback({ query, endpoint, token }: getAiFeedbackT) {
   const result = await response.json();
   return result.text;
 }
-
-export { getAiFeedback };

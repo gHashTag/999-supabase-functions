@@ -287,3 +287,9 @@ export interface TranscriptionAsset extends RoomAsset {
   user_id: string;
   workspace_id: string;
 }
+
+export interface getAiFeedbackT {
+  query: string;
+  endpoint: string;
+  token?: string;
+}

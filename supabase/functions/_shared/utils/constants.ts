@@ -16,6 +16,10 @@ if (!Deno.env.get("SUPABASE_URL")) {
   throw new Error("SUPABASE_URL is not set");
 }
 
+if (!Deno.env.get("FUNCTION_SECRET")) {
+  throw new Error("FUNCTION_SECRET is not set");
+}
+
 export const SITE_URL = DEV
   ? Deno.env.get("LOCAL_URL")
   : Deno.env.get("PRODUCTION_URL");
@@ -29,3 +33,7 @@ export const headers = {
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export const FUNCTION_SECRET = Deno.env.get("FUNCTION_SECRET");
+
+export const model_ai = "gpt-4o";

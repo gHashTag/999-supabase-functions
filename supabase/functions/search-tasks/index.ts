@@ -1,13 +1,7 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
-import { createClient } from "npm:@supabase/supabase-js@2.42.0";
-
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
-
-const model = new Supabase.ai.Session("gte-small");
+import { model } from "../_shared/utils/supabase/ai.ts";
+import { supabase } from "../_shared/utils/supabase/index.ts";
 
 Deno.serve(async (req) => {
   const { search } = await req.json();

@@ -6,11 +6,10 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-import { getAiFeedback } from "../get-ai-feedback.ts";
-import { delay } from "../_shared/utils/constants.ts";
+import { getAiFeedbackFromSupabase } from "../get-ai-feedback.ts";
+import { delay, FUNCTION_SECRET } from "../_shared/utils/constants.ts";
 import { createUser } from "../_shared/utils/nextapi/index.ts";
 import {
-  aiKosheyFlowiseToken,
   aiKosheyUrl,
   botAiKoshey,
   botUsername,
@@ -32,6 +31,7 @@ import {
   setPassport,
 } from "../_shared/utils/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/utils/types/index.ts";
+import { SUPABASE_URL } from "../_shared/utils/supabase/index.ts";
 
 export type CreateUserT = {
   id: number;
@@ -357,13 +357,15 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       // Обрабатываем ответ пользовател
     } else {
       const query = ctx?.message?.text;
-
+      console.log(query, "query");
       try {
-        if (query && aiKosheyUrl && aiKosheyFlowiseToken) {
-          const feedback = await getAiFeedback({
+        if (query && aiKosheyUrl) {
+          const endpoint =
+            `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
+          console.log(endpoint, "endpoint");
+          const feedback = await getAiFeedbackFromSupabase({
             query,
-            endpoint: aiKosheyUrl,
-            token: aiKosheyFlowiseToken,
+            endpoint: endpoint,
           });
           await ctx.reply(feedback, { parse_mode: "Markdown" });
           return;
@@ -374,6 +376,27 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       }
       return;
     }
+  } else {
+    await ctx.replyWithChatAction("typing");
+    const query = ctx?.message?.text;
+    console.log(query, "query");
+    try {
+      if (query && aiKosheyUrl) {
+        const endpoint =
+          `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
+        console.log(endpoint, "endpoint");
+        const feedback = await getAiFeedbackFromSupabase({
+          query,
+          endpoint: endpoint,
+        });
+        await ctx.reply(feedback, { parse_mode: "Markdown" });
+        return;
+      }
+    } catch (error) {
+      console.error("Ошибка при получении ответа AI:", error);
+      return;
+    }
+    return;
   }
 });
 
@@ -534,16 +557,39 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   }
 });
 
-// await botAiKoshey.api.setMyCommands([
-//   {
-//     command: "/start",
-//     description: "Start the bot",
-//   },
-//   // {
-//   //   command: "/room",
-//   //   description: "Create a room",
-//   // },
-// ]);
+// botAiKoshey.on("message:text", async (ctx) => {
+//   await ctx.replyWithChatAction("typing");
+//   const query = ctx?.message?.text;
+//   console.log(query, "query");
+//   try {
+//     if (query && aiKosheyUrl) {
+//       const endpoint =
+//         `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
+//       console.log(endpoint, "endpoint");
+//       const feedback = await getAiFeedbackFromSupabase({
+//         query,
+//         endpoint: endpoint,
+//       });
+//       await ctx.reply(feedback, { parse_mode: "Markdown" });
+//       return;
+//     }
+//   } catch (error) {
+//     console.error("Ошибка при получении ответа AI:", error);
+//     return;
+//   }
+//   return;
+// });
+
+await botAiKoshey.api.setMyCommands([
+  {
+    command: "/start",
+    description: "Start chatting with Ai Koshey",
+  },
+  // {
+  //   command: "/room",
+  //   description: "Create a room",
+  // },
+]);
 
 botAiKoshey.catch((err) => {
   const ctx = err.ctx;
