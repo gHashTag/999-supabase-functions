@@ -1,4 +1,5 @@
-console.log(`Function "ai_kochey_bot" up and running!`);
+// Setup type definitions for built-in Supabase Runtime APIs
+/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
 import {
   Context,
@@ -13,6 +14,7 @@ import {
   aiKosheyUrl,
   botAiKoshey,
   botUsername,
+  bugCatcherRequest,
   handleUpdateAiKoshey,
 } from "../_shared/utils/telegram/bots.ts";
 import {
@@ -241,6 +243,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
           await ctx.reply(
             `🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`,
           );
+          await bugCatcherRequest(
+            "ai_koshey_bot (select_izbushka && inviter)",
+            error,
+          );
           return;
         }
       } else {
@@ -274,6 +280,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
         return;
       } catch (error) {
         await ctx.reply(`🤔 Error: checkAndReturnUser.\n${error}`);
+        await bugCatcherRequest(
+          "ai_koshey_bot (select_izbushka && inviter)",
+          error,
+        );
         throw new Error("Error: checkAndReturnUser.");
       }
     }
@@ -354,27 +364,8 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       } catch (error) {
         console.error(error);
       }
-      // Обрабатываем ответ пользовател
     } else {
-      // const query = ctx?.message?.text;
-      // console.log(query, "query");
-      // try {
-      //   if (query && aiKosheyUrl) {
-      //     const endpoint =
-      //       `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
-
-      //     const { content } = await getAiFeedbackFromSupabase({
-      //       query,
-      //       endpoint: endpoint,
-      //     });
-      //     console.log(content, "content");
-      //     await ctx.reply(content, { parse_mode: "Markdown" });
-      //     return;
-      //   }
-      // } catch (error) {
-      //   console.error("Ошибка при получении ответа AI:", error);
-      //   return;
-      // }
+      console.log("else!!!");
       return;
     }
   } else {
@@ -507,6 +498,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       return;
     } catch (error) {
       console.error(error);
+      await bugCatcherRequest("ai_koshey_bot (name_izbushka)", error);
+      throw new Error("ai_koshey_bot (name_izbushka)");
     }
   }
 
@@ -540,29 +533,37 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         });
       } else {
         await ctx.reply("Ошибка: не удалось загрузить избушки.");
+        await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
+        throw new Error("ai_koshey_bot (show_izbushka)");
       }
       return;
     } catch (error) {
       console.error("error show_izbushka", error);
-      return;
+      await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
+      throw new Error("ai_koshey_bot (show_izbushka)");
     }
   }
 
   if (callbackData.includes("select_izbushka")) {
-    const select_izbushka = callbackData.split("_")[2];
-    console.log(select_izbushka, "select_izbushka");
-    if (select_izbushka) {
-      username && await setSelectedIzbushka(username, select_izbushka);
-    }
+    try {
+      const select_izbushka = callbackData.split("_")[2];
+      console.log(select_izbushka, "select_izbushka");
+      if (select_izbushka) {
+        username && await setSelectedIzbushka(username, select_izbushka);
+      }
 
-    await ctx.reply(
-      `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
-    );
-    await delay(500);
-    await ctx.reply(
-      `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
-    );
-    return;
+      await ctx.reply(
+        `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
+      );
+      await delay(500);
+      await ctx.reply(
+        `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
+      );
+      return;
+    } catch (error) {
+      await bugCatcherRequest("ai_koshey_bot (select_izbushka)", error);
+      throw new Error("ai_koshey_bot (select_izbushka)");
+    }
   }
 });
 
@@ -608,8 +609,10 @@ botAiKoshey.catch((err) => {
     console.error("Error in request:", e.description);
   } else if (e instanceof HttpError) {
     console.error("Could not contact Telegram:", e);
+    throw e;
   } else {
     console.error("Unknown error:", e);
+    throw e;
   }
 });
 

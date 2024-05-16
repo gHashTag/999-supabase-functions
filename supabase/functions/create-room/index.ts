@@ -26,16 +26,16 @@ Deno.serve(async (req) => {
   const supabaseClient = client();
 
   try {
-    // const url = new URL(req.url);
-    // if (
-    //   url.searchParams.get("secret") !==
-    //     Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")
-    // ) {
-    //   return new Response("Not allowed", {
-    //     status: 405,
-    //     headers: { ...headers, ...corsHeaders },
-    //   });
-    // }
+    const url = new URL(req.url);
+    if (
+      url.searchParams.get("secret") !==
+        Deno.env.get("FUNCTION_SECRET")
+    ) {
+      return new Response("Not allowed", {
+        status: 405,
+        headers: { ...headers, ...corsHeaders },
+      });
+    }
 
     const { name, type, email } = await req.json();
 
@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
         name,
         updated_at: new Date(),
         user_id,
+        language_code: user_id.language_code,
         room_id: Number(id),
       };
 
@@ -108,3 +109,5 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// supabase functions deploy create-room --no-verify-jwt
