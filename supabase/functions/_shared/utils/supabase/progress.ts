@@ -54,7 +54,7 @@ export async function updateProgress(
 
 export async function updateResult(
   { user_id, language, value }: UpdateResultParams,
-): Promise<void | Response> {
+): Promise<void> {
   try {
     const response: SupabaseResponse<null> = await supabase
       .from("result")
@@ -72,7 +72,7 @@ export async function updateResult(
 
 export async function getLastCallback(
   language: string,
-): Promise<LastCallbackResult | Response | null> {
+): Promise<LastCallbackResult | null> {
   try {
     const lessonResponse = await supabase
       .from(language)
@@ -205,15 +205,25 @@ export async function resetProgress(
 
       if (insertError) throw new Error(insertError.message);
     } else {
-      // Если запись существует, очищаем все поля, кроме user_id и created_at
-      const { error: updateError } = await supabase
+      const {data: dataProgress, error: errorProgress} = await supabase
+        .from("progress")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+        if (errorProgress) throw new Error(errorProgress.message);
+
+      const allReset = dataProgress.all - dataProgress[language];
+
+      const { error: resetError } = await supabase
         .from("progress")
         .update({
           [language]: 0,
+          all: allReset,
         })
         .eq("user_id", userId);
 
-      if (updateError) throw new Error(updateError.message);
+      if (resetError) throw new Error(resetError.message);
     }
   } catch (error) {
     throw new Error("Error resetProgress: " + error);
@@ -222,31 +232,34 @@ export async function resetProgress(
 
 export async function getCorrects(
   { user_id, language }: getCorrectsT,
-): Promise<number | Response> {
+): Promise<number> {
   try {
     if (user_id !== undefined) {
-      const response = await supabase
+      const {data: dataCorrects, error: errorCorrects} = await supabase
         .from("progress")
         .select("*")
         .eq("user_id", user_id)
         .single();
 
-      if (response.error) {
-        throw new Error("Error getCorrects: " + response.error.message);
+      console.log(dataCorrects, "dataCorrects");
+      console.log(errorCorrects, "errorCorrects");
+
+      if (errorCorrects !== null) {
+        throw new Error("Error getCorrects: " + errorCorrects.message);
       }
 
-      if (!response.data) {
+      if (!dataCorrects) {
         throw new Error("User not found");
       }
 
-      const correctAnswers = response.data[language];
+      const correctAnswers = dataCorrects[language];
 
       return correctAnswers;
     } else {
       console.error("user_id Type is undefined");
-      return 0;
+      throw 0;
     }
   } catch (error) {
-    throw new Error("Error getCorrects: " + error);
+    throw new Error("Error getCorrects(254): " + error);
   }
 }

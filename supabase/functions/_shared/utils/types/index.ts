@@ -290,6 +290,4 @@ export interface TranscriptionAsset extends RoomAsset {
 
 export interface getAiFeedbackT {
   query: string;
-  endpoint: string;
-  token?: string;
 }

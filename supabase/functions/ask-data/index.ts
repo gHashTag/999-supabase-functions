@@ -16,7 +16,7 @@ export const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // ask-custom-data logic
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -68,14 +68,14 @@ serve(async (req) => {
 
     // Limit context to max 1500 tokens (configurable)
     if (tokenCount > 1500) {
-      break;
+      throw new Response("Context too long", { status: 400 });
     }
 
     contextText += `${content.trim()}\n`;
   }
 
   const prompt = stripIndent`${oneLine`
-  You are the head of the dao 999 nft digital avatar bank, which is very helpful when it comes to talking about the tasks of its inhabitants! Always answer honestly and be as helpful as you can! Your name is Ai Koschey with the main task of helping users solve their problems."`}
+  You are the head of the dao 999 nft digital avatar bank, which is very helpful when it comes to talking about the tasks of its inhabitants! Always answer honestly and be as helpful as you can! Your name is Ai Koshey with the main task of helping users solve their problems."`}
     Context sections:
     ${contextText}
     Question: """
