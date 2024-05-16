@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { client } from "../_shared/utils/supabase/index.ts";
-import { translateText } from "../_shared/utils/translateText.ts";
+import { client } from "../_shared/supabase/index.ts";
+import { translateText } from "../_shared/translateText.ts";
 
 const supabase = client();
 

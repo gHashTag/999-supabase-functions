@@ -7,33 +7,33 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-import { getAiFeedbackFromSupabase } from "../get-ai-feedback.ts";
-import { delay, FUNCTION_SECRET } from "../_shared/utils/constants.ts";
-import { createUser } from "../_shared/utils/nextapi/index.ts";
+import { delay, FUNCTION_SECRET } from "../_shared/constants.ts";
+import { createUser } from "../_shared/nextapi/index.ts";
 import {
   aiKosheyUrl,
   botAiKoshey,
   botUsername,
   bugCatcherRequest,
   handleUpdateAiKoshey,
-} from "../_shared/utils/telegram/bots.ts";
+} from "../_shared/telegram/bots.ts";
 import {
   checkAndReturnUser,
   checkUsernameCodes,
   setSelectedIzbushka,
-} from "../_shared/utils/supabase/users.ts";
+} from "../_shared/supabase/users.ts";
 import {
   getRooms,
   getRoomsCopperPipes,
   getRoomsWater,
   getSelectIzbushkaId,
-} from "../_shared/utils/supabase/rooms.ts";
+} from "../_shared/supabase/rooms.ts";
 import {
   checkPassportByRoomId,
   setPassport,
-} from "../_shared/utils/supabase/passport.ts";
-import { PassportUser, RoomNode } from "../_shared/utils/types/index.ts";
-import { SUPABASE_URL } from "../_shared/utils/supabase/index.ts";
+} from "../_shared/supabase/passport.ts";
+import { PassportUser, RoomNode } from "../_shared/types/index.ts";
+import { SUPABASE_URL } from "../_shared/supabase/index.ts";
+import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 export type CreateUserT = {
   id: number;
@@ -372,31 +372,14 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
     await ctx.replyWithChatAction("typing");
     const query = ctx?.message?.text;
     console.log(query, "query");
-    try {
-      if (query && aiKosheyUrl) {
-        try {
-          if (query && aiKosheyUrl) {
-            const endpoint =
-              `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
 
-            const { content } = await getAiFeedbackFromSupabase({
-              query,
-              endpoint: endpoint,
-            });
-            console.log(content, "content");
-            await ctx.reply(content, { parse_mode: "Markdown" });
-            return;
-          }
-        } catch (error) {
-          console.error("Ошибка при получении ответа AI:", error);
-          return;
-        }
-      }
-    } catch (error) {
-      console.error("Ошибка при получении ответа AI:", error);
+    if (query) {
+      const { content } = await getAiFeedbackFromSupabase({
+        query,
+      });
+      await ctx.reply(content, { parse_mode: "Markdown" });
       return;
     }
-    return;
   }
 });
 

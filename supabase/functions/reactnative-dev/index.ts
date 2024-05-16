@@ -1,23 +1,22 @@
-import {
-  createUser,
-  getBiggest,
-  getCorrects,
-  getLastCallback,
-  getQuestion,
-  getUid,
-  resetProgress,
-  updateProgress,
-  updateResult,
-} from "../_shared/utils/supabase/index.ts";
 import { pathIncrement } from "../path-increment.ts";
-import { getAiFeedback } from "../get-ai-feedback.ts";
+
 import { checkSubscription } from "../check-subscription.ts";
 import {
   handleUpdateReactNative,
   reactNativeDevBot,
-} from "../_shared/utils/telegram/bots.ts";
+} from "../_shared/telegram/bots.ts";
 import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
+import { createUser, getUid } from "../_shared/supabase/users.ts";
+import { getAiFeedback } from "../_shared/supabase/ai.ts";
+import {
+  getBiggest,
+  getCorrects,
+  getLastCallback,
+  getQuestion,
+  updateProgress,
+  updateResult,
+} from "../_shared/supabase/progress.ts";
 
 reactNativeDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");

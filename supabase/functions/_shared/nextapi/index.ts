@@ -1,7 +1,6 @@
-import { CreateUserProps } from "../../types/index.ts";
 import { PRODUCTION_URL } from "../constants.ts";
 
-export async function createUser(data: CreateUserProps) {
+export async function createUser(data: any) {
   try {
     const url = `${PRODUCTION_URL}/api/create-user`;
 

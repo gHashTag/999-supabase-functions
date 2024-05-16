@@ -1,9 +1,10 @@
-import { createCodes } from "../_shared/utils/100ms/create-codes.ts";
-import { corsHeaders } from "../_shared/corsHeaders.ts";
-import { client } from "../_shared/utils/supabase/index.ts";
+import { createCodes } from "../_shared/100ms/create-codes.ts";
+
+import { client } from "../_shared/supabase/index.ts";
 // import { corsHeaders } from "../_shared/cors.ts";
 import { headers } from "../_shared/headers.ts";
-import { myHeaders } from "../_shared/utils/100ms/my-headers.ts";
+import { myHeaders } from "../_shared/100ms/my-headers.ts";
+import { corsHeaders } from "../_shared/handleCORS.ts";
 // import { handleCORS } from "../_shared/handleCORS.ts";
 if (!Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")) {
   throw new Error("NEXT_PUBLIC_FUNCTION_SECRET is not set");

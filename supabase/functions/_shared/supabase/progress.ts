@@ -205,13 +205,13 @@ export async function resetProgress(
 
       if (insertError) throw new Error(insertError.message);
     } else {
-      const {data: dataProgress, error: errorProgress} = await supabase
+      const { data: dataProgress, error: errorProgress } = await supabase
         .from("progress")
         .select("*")
         .eq("user_id", userId)
         .single();
 
-        if (errorProgress) throw new Error(errorProgress.message);
+      if (errorProgress) throw new Error(errorProgress.message);
 
       const allReset = dataProgress.all - dataProgress[language];
 
@@ -235,7 +235,7 @@ export async function getCorrects(
 ): Promise<number> {
   try {
     if (user_id !== undefined) {
-      const {data: dataCorrects, error: errorCorrects} = await supabase
+      const { data: dataCorrects, error: errorCorrects } = await supabase
         .from("progress")
         .select("*")
         .eq("user_id", user_id)

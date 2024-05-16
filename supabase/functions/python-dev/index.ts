@@ -1,23 +1,20 @@
+import { pathIncrement } from "../path-increment.ts";
+
+import { checkSubscription } from "../check-subscription.ts";
+import { handleUpdatePython, pythonDevBot } from "../_shared/telegram/bots.ts";
+import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
+import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
 import {
-  createUser,
   getBiggest,
   getCorrects,
   getLastCallback,
   getQuestion,
-  getUid,
   resetProgress,
   updateProgress,
   updateResult,
-} from "../_shared/utils/supabase/index.ts";
-import { pathIncrement } from "../path-increment.ts";
-import { getAiFeedback } from "../get-ai-feedback.ts";
-import { checkSubscription } from "../check-subscription.ts";
-import {
-  handleUpdatePython,
-  pythonDevBot,
-} from "../_shared/utils/telegram/bots.ts";
-import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
-import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
+} from "../_shared/supabase/progress.ts";
+import { createUser, getUid } from "../_shared/supabase/users.ts";
+import { getAiFeedback } from "../_shared/supabase/ai.ts";
 
 pythonDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");

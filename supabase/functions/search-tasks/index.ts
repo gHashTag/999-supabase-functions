@@ -1,7 +1,7 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
-import { model } from "../_shared/utils/supabase/ai.ts";
-import { supabase } from "../_shared/utils/supabase/index.ts";
+import { model } from "../_shared/supabase/ai.ts";
+import { supabase } from "../_shared/supabase/index.ts";
 
 Deno.serve(async (req) => {
   const { search } = await req.json();

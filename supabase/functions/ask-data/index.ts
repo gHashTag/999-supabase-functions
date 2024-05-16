@@ -2,13 +2,9 @@ import { serve } from "https://deno.land/std@0.170.0/http/server.ts";
 import "https://deno.land/x/xhr@0.2.1/mod.ts";
 
 import { oneLine, stripIndent } from "https://esm.sh/common-tags@1.8.2";
-import { supabase } from "../_shared/utils/supabase/index.ts";
+import { supabase } from "../_shared/supabase/index.ts";
 
-import {
-  getCompletion,
-  model,
-  tokenizer,
-} from "../_shared/utils/supabase/ai.ts";
+import { getCompletion, model, tokenizer } from "../_shared/supabase/ai.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
