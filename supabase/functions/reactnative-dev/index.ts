@@ -6,18 +6,19 @@ import {
   resetProgress,
   updateProgress,
   updateResult,
-} from "../_shared/utils/supabase/progress.ts";
-import { getUid } from "../_shared/utils/supabase/users.ts";
+} from "../_shared/supabase/progress.ts";
+import { getUid } from "../_shared/supabase/users.ts";
 import { pathIncrement } from "../path-increment.ts";
-import { getAiFeedbackFromSupabase } from "../get-ai-feedback.ts";
+
 import { checkSubscription } from "../check-subscription.ts";
 import {
   handleUpdateReactNative,
   reactNativeDevBot,
-} from "../_shared/utils/telegram/bots.ts";
+} from "../_shared/telegram/bots.ts";
 import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
-import { createUser } from "../_shared/utils/nextapi/index.ts";
+import { createUser } from "../_shared/nextapi/index.ts";
+import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 reactNativeDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
@@ -29,7 +30,7 @@ reactNativeDevBot.command("start", async (ctx) => {
     language_code: ctx.from?.language_code || "",
     chat_id: ctx.chat.id,
     telegram_id: ctx.from?.id || 0,
-    inviter: ""
+    inviter: "",
   });
   const isSubscription = await checkSubscription(
     ctx,
@@ -41,8 +42,8 @@ reactNativeDevBot.command("start", async (ctx) => {
   if (isSubscription === true) {
     await ctx.reply(
       isRu
-        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования React Native с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы React Native, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир React Native? \nНачать тест(кнопка)`
-        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn React Native programming language with artificial intelligence! Here you can not only learn the basics of React Native, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of React Native? \nStart Test(button)`,
+        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования React Native с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы React Native, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир ReactNative? \nНачать тест(кнопка)`
+        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn React Native programming language with artificial intelligence! Here you can not only learn the basics of React Native, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of ReactNative? \nStart Test(button)`,
       // ctx.t("startReactNative"),
       {
         reply_markup: {
@@ -54,7 +55,7 @@ reactNativeDevBot.command("start", async (ctx) => {
     );
   } else if (isSubscription === false) {
     const messageText = isRu
-      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Таст, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
+      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
       : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
     await ctx.replyWithPhoto(
       isRu
@@ -84,7 +85,7 @@ reactNativeDevBot.on("message:text", async (ctx) => {
   const query = ctx.message.text;
 
   try {
-    const feedback = await getAiFeedbackFromSupabase( {query} );
+    const feedback = await getAiFeedbackFromSupabase({ query });
     await ctx.reply(feedback.content, { parse_mode: "Markdown" });
     return;
   } catch (error) {
@@ -129,7 +130,10 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
           return;
         }
         const topic = isRu ? ruTopic : enTopic;
-        const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
         // Формируем сообщение
         const messageText =
           `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
@@ -218,7 +222,10 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
         return;
       }
       console.log(user_id);
-      const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
+      const allAnswers = await getCorrects({
+        user_id: user_id.toString(),
+        language: "all",
+      });
       // Формируем сообщение
       const messageText =
         `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
@@ -293,13 +300,23 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
           isTrueAnswer = false;
           await ctx.reply("❌");
         }
-        await updateProgress({ user_id: user_id.toString(), isTrue: isTrueAnswer, language });
+        await updateProgress({
+          user_id: user_id.toString(),
+          isTrue: isTrueAnswer,
+          language,
+        });
         const newPath = await pathIncrement({
           path,
           isSubtopic: biggestSubtopic === subtopic ? false : true,
         });
-        const correctAnswers = await getCorrects({ user_id: user_id.toString(), language });
-        const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
+        const correctAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language,
+        });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
 
         const lastCallbackContext = await getLastCallback(language);
         console.log(lastCallbackContext);

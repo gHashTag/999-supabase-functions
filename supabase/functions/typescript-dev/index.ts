@@ -1,6 +1,3 @@
-import { pathIncrement } from "../path-increment.ts";
-
-import { checkSubscription } from "../check-subscription.ts";
 import {
   getBiggest,
   getCorrects,
@@ -9,18 +6,19 @@ import {
   resetProgress,
   updateProgress,
   updateResult,
-} from "../_shared/utils/supabase/progress.ts";
-import { getUid } from "../_shared/utils/supabase/users.ts";
+} from "../_shared/supabase/progress.ts";
+import { getUid } from "../_shared/supabase/users.ts";
 import { pathIncrement } from "../path-increment.ts";
-import { getAiFeedbackFromSupabase } from "../get-ai-feedback.ts";
+
 import { checkSubscription } from "../check-subscription.ts";
 import {
   handleUpdateTypeScript,
   typeScriptDevBot,
-} from "../_shared/utils/telegram/bots.ts";
+} from "../_shared/telegram/bots.ts";
 import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
-import { createUser } from "../_shared/utils/nextapi/index.ts";
+import { createUser } from "../_shared/nextapi/index.ts";
+import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 typeScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
@@ -32,7 +30,7 @@ typeScriptDevBot.command("start", async (ctx) => {
     language_code: ctx.from?.language_code || "",
     chat_id: ctx.chat.id,
     telegram_id: ctx.from?.id || 0,
-    inviter: ""
+    inviter: "",
   });
   const isSubscription = await checkSubscription(
     ctx,
@@ -57,8 +55,8 @@ typeScriptDevBot.command("start", async (ctx) => {
     );
   } else if (isSubscription === false) {
     const messageText = isRu
-      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
-      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
+      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите TypeScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
+      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn TypeScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
     await ctx.replyWithPhoto(
       isRu
         ? "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ca0YPRgNGBINCQ0LLRgtC+0LzQsNGC0LjQt9Cw0YbQuNGP8J+kliBCb3RNb3RoZXJf0J/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40LUg0L/QvtC0INGA0YPQutC+0LLQvtC00YHRgtCy0L7QvCDQvdC10LnRgNC+0L3QvdGL0YUg0L/QvtC80L7RidC90LjQutC+0LIuINCS0Ysg0LjQt9GD0YfQuNGC0LUgSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwg0KLQsNGBdCwgR3JhcGhRTCwgQXBvbGxvINC4INC40L3RgtC10LPRgNCw0YbQuNGOINGBINCx0LvQvtC60YfQtdC50L3QvtC8IFRPTiDQuCBUZWxlZ3JhbSBNaW5pIEFwcF8xNzE0NzE1NDA4"
@@ -87,7 +85,7 @@ typeScriptDevBot.on("message:text", async (ctx) => {
   const query = ctx.message.text;
 
   try {
-    const feedback = await getAiFeedbackFromSupabase( {query} );
+    const feedback = await getAiFeedbackFromSupabase({ query });
     await ctx.reply(feedback.content, { parse_mode: "Markdown" });
     return;
   } catch (error) {
@@ -132,7 +130,10 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           return;
         }
         const topic = isRu ? ruTopic : enTopic;
-        const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
         // Формируем сообщение
         const messageText =
           `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
@@ -221,7 +222,10 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
         return;
       }
       console.log(user_id);
-      const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
+      const allAnswers = await getCorrects({
+        user_id: user_id.toString(),
+        language: "all",
+      });
       // Формируем сообщение
       const messageText =
         `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
@@ -296,13 +300,23 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           isTrueAnswer = false;
           await ctx.reply("❌");
         }
-        await updateProgress({ user_id: user_id.toString(), isTrue: isTrueAnswer, language });
+        await updateProgress({
+          user_id: user_id.toString(),
+          isTrue: isTrueAnswer,
+          language,
+        });
         const newPath = await pathIncrement({
           path,
           isSubtopic: biggestSubtopic === subtopic ? false : true,
         });
-        const correctAnswers = await getCorrects({ user_id: user_id.toString(), language });
-        const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
+        const correctAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language,
+        });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
 
         const lastCallbackContext = await getLastCallback(language);
         console.log(lastCallbackContext);
