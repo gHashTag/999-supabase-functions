@@ -13,8 +13,7 @@ Deno.serve(async (req) => {
   const payload = await req.json();
   const oldRecord = payload?.old_record;
   // console.log(oldRecord, "oldRecord");
-  const { title, description, created_at, updated_at, assigned_to, id } =
-    payload.record;
+  const { title, description, created_at, updated_at, id } = payload.record;
   const hasChanged = Object.keys(payload.record).some((key) =>
     payload.record[key] !== oldRecord[key]
   );
@@ -25,8 +24,7 @@ Deno.serve(async (req) => {
     return new Response("ok - no change");
   }
 
-  const content =
-    `${title}\n${description}\n${created_at}\n${updated_at}\n${assigned_to}`;
+  const content = `${title}\n${description}\n${created_at}\n${updated_at}`;
   // console.log(content, "content");
 
   // Generate embedding
@@ -47,3 +45,5 @@ Deno.serve(async (req) => {
 
   return new Response("ok - updated");
 });
+
+// supabase functions deploy generate-embedding-tasks

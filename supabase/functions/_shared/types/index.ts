@@ -89,6 +89,7 @@ export interface UserPassport {
   photo_url?: string;
   task_id?: string;
   passport_id?: string;
+  recording_id?: string;
   rooms?: RoomNode[];
 }
 
@@ -294,6 +295,15 @@ export interface getAiFeedbackT {
   token?: string;
 }
 
+export interface Filter {
+  username: string;
+  user_id: string;
+  workspace_id: string;
+  room_id: string;
+  recording_id: string;
+}
+
 export interface getAiSupabaseFeedbackT {
   query: string;
+  id_array: string[];
 }

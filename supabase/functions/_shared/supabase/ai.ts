@@ -56,12 +56,13 @@ interface Task {
 }
 
 export async function getAiFeedbackFromSupabase(
-  { query }: getAiSupabaseFeedbackT,
+  { query, id_array }: getAiSupabaseFeedbackT,
 ): Promise<{ content: string; tasks: Task[]; data: any }> {
   try {
     const { data } = await supabase.functions.invoke("ask-data", {
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, id_array }),
     });
+
     console.log(data, "data");
     return {
       content: data.content,

@@ -29,6 +29,7 @@ import {
 } from "../_shared/supabase/rooms.ts";
 import {
   checkPassportByRoomId,
+  getPassportsTasksByUsername,
   setPassport,
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
@@ -293,7 +294,8 @@ botAiKoshey.command("start", async (ctx: Context) => {
 botAiKoshey.on("message:text", async (ctx: Context) => {
   await ctx.replyWithChatAction("typing");
   const inviter = ctx?.message?.text;
-
+  const message = ctx.update.message;
+  const language_code = message?.from?.language_code;
   // Проверяем, является ли сообщение ответом (есть ли reply_to_message)
   if (ctx?.message?.reply_to_message) {
     // Проверяем, содержит ли текст оригинального сообщения определенный текст
@@ -310,8 +312,6 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         );
 
         if (isInviterExist) {
-          const message = ctx.update.message;
-          const language_code = message?.from?.language_code;
           const user = {
             id: message?.from?.id,
             username: message?.from?.username,
@@ -372,13 +372,30 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
     await ctx.replyWithChatAction("typing");
     const query = ctx?.message?.text;
     console.log(query, "query");
+    const username = ctx?.update?.message?.from?.username;
+    console.log(username, "username");
 
-    if (query) {
-      const { content } = await getAiFeedbackFromSupabase({
-        query,
-      });
-      await ctx.reply(content, { parse_mode: "Markdown" });
-      return;
+    if (username) {
+      const id_array = await getPassportsTasksByUsername(username);
+      console.log(id_array, "id_array");
+      if (query) {
+        const { content, tasks } = await getAiFeedbackFromSupabase({
+          query,
+          id_array,
+        });
+        getAiFeedbackFromSupabase;
+        let tasksMessage = `📝 ${
+          language_code === "ru" ? "Задачи:\n" : "Tasks:\n"
+        }`;
+        tasks.forEach((task) => {
+          tasksMessage += `\n${task.title}\n${task.description}\n`;
+        });
+
+        await ctx.reply(`${content}\n\n${tasksMessage}`, {
+          parse_mode: "Markdown",
+        });
+        return;
+      }
     }
   }
 });

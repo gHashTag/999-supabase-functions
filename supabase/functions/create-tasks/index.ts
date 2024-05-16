@@ -5,10 +5,10 @@ import { client } from "../_shared/supabase/index.ts";
 import { Bot } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 import { translateText } from "../_shared/translateText.ts";
 
-import { createChatCompletionJson } from "../_shared/createChatCompletionJson.ts";
+import { createChatCompletionJson } from "../_shared/openai/createChatCompletionJson.ts";
 
 import { headers } from "../_shared/headers.ts";
-import { createEmoji } from "../_shared/createEmoji.ts";
+import { createEmoji } from "../_shared/openai/createEmoji.ts";
 
 import { SITE_URL } from "../_shared/constants.ts";
 import { supportRequest } from "../_shared/telegram/bots.ts";
