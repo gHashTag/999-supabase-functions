@@ -101,7 +101,7 @@ export const createUserInDatabase = async (
 
 export async function getUid(
   username: string,
-): Promise<string  | null> {
+): Promise<string | null> {
   try {
     // Запрос к таблице users для получения user_id по username
     const response = await supabase

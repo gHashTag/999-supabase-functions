@@ -8,18 +8,18 @@ import {
   webhookCallback,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
+import { transliterate } from "../_shared/openai/transliterate.ts";
+import { create100MsRoom } from "../_shared/100ms/create-room.ts";
+
+import { DEV } from "../_shared/constants.ts";
 import {
-  checkUsernameCodes,
-  getRooms,
   getSupabaseUser,
-  setMyWorkspace,
   setSelectedIzbushka,
-  supabase,
-} from "../_shared/utils/supabase/index.ts";
-import { transliterate } from "../_shared/utils/openai/transliterate.ts";
-import { create100MsRoom } from "../_shared/utils/100ms/create-room.ts";
-import { getAiFeedback } from "../get-ai-feedback.ts";
-import { DEV } from "../_shared/utils/constants.ts";
+} from "../_shared/supabase/users.ts";
+import { supabase } from "../_shared/supabase/index.ts";
+import { setMyWorkspace } from "../_shared/supabase/workspaces.ts";
+import { getAiFeedback } from "../_shared/supabase/ai.ts";
+import { getRooms } from "../_shared/supabase/rooms.ts";
 
 if (!Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY")) {
   throw new Error("TELEGRAM_BOT_TOKEN_AI_KOSHEY is not set");

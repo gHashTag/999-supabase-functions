@@ -1,3 +1,9 @@
+import { pathIncrement } from "../path-increment.ts";
+
+import { checkSubscription } from "../check-subscription.ts";
+import { handleUpdatePython, pythonDevBot } from "../_shared/telegram/bots.ts";
+import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
+import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
 import {
   getBiggest,
   getCorrects,

@@ -1,31 +1,27 @@
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
-import { client, getWorkspaceById } from "../_shared/utils/supabase/index.ts";
+import { client } from "../_shared/supabase/index.ts";
 import { Bot } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
-import { translateText } from "../_shared/utils/translateText.ts";
+import { translateText } from "../_shared/translateText.ts";
 
-import { createChatCompletionJson } from "../_shared/utils/createChatCompletionJson.ts";
-import { corsHeaders } from "../_shared/corsHeaders.ts";
+import { createChatCompletionJson } from "../_shared/openai/createChatCompletionJson.ts";
+
 import { headers } from "../_shared/headers.ts";
-import { createEmoji } from "../_shared/utils/createEmoji.ts";
+import { createEmoji } from "../_shared/openai/createEmoji.ts";
 
-import { SITE_URL } from "../_shared/utils/constants.ts";
-import { supportRequest } from "../_shared/utils/telegram/bots.ts";
+import { SITE_URL } from "../_shared/constants.ts";
+import { supportRequest } from "../_shared/telegram/bots.ts";
 import {
   createPassport,
   getPassportByRoomId,
-} from "../_shared/utils/supabase/passport.ts";
-import { getRoomById } from "../_shared/utils/supabase/rooms.ts";
-import {
-  PassportUser,
-  TranscriptionAsset,
-} from "../_shared/utils/types/index.ts";
-import {
-  createTask,
-  updateTaskByPassport,
-} from "../_shared/utils/supabase/tasks.ts";
-import { setRoomAsset } from "../_shared/utils/supabase/room_assets.ts";
+} from "../_shared/supabase/passport.ts";
+import { getRoomById } from "../_shared/supabase/rooms.ts";
+import { PassportUser, TranscriptionAsset } from "../_shared/types/index.ts";
+import { createTask, updateTaskByPassport } from "../_shared/supabase/tasks.ts";
+import { setRoomAsset } from "../_shared/supabase/room_assets.ts";
+import { corsHeaders } from "../ask-data/index.ts";
+import { getWorkspaceById } from "../_shared/supabase/workspaces.ts";
 
 type Task = {
   id: string;

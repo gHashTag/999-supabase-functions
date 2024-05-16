@@ -1,10 +1,9 @@
-import { corsHeaders } from "../../corsHeaders.ts";
 import { WorkspaceNode } from "../types/index.ts";
 import { supabase } from "./index.ts";
 
 export async function getWorkspaceById(
   workspace_id: string,
-): Promise<WorkspaceNode[] | Response> {
+): Promise<WorkspaceNode[]> {
   try {
     const { data, error } = await supabase
       .from("workspaces")
@@ -17,19 +16,13 @@ export async function getWorkspaceById(
     return data as WorkspaceNode[];
   } catch (error) {
     console.error(error, "error getWorkspaceById");
-    return new Response(
-      JSON.stringify({ message: "Error getWorkspaceById: " + error }),
-      {
-        status: 500,
-        headers: { ...corsHeaders },
-      },
-    );
+    throw new Error(error.message);
   }
 }
 
 export async function getWorkspaceByName(
   name: string,
-): Promise<WorkspaceNode[] | Response> {
+): Promise<WorkspaceNode[]> {
   try {
     const { data, error } = await supabase
       .from("workspaces")
@@ -41,20 +34,13 @@ export async function getWorkspaceByName(
     }
     return data as WorkspaceNode[];
   } catch (error) {
-    console.error(error, "error getWorkspaceByName");
-    return new Response(
-      JSON.stringify({ message: "Error getWorkspaceByName: " + error }),
-      {
-        status: 500,
-        headers: { ...corsHeaders },
-      },
-    );
+    throw new Error(error.message);
   }
 }
 
 export async function setMyWorkspace(
   user_id: string,
-): Promise<WorkspaceNode[] | Response> {
+): Promise<WorkspaceNode[]> {
   try {
     const { data, error } = await supabase.from("workspaces").insert([
       {
@@ -71,13 +57,6 @@ export async function setMyWorkspace(
     }
     return data as WorkspaceNode[];
   } catch (error) {
-    console.error(error, "error setMyWorkspace");
-    return new Response(
-      JSON.stringify({ message: "Error setMyWorkspace: " + error }),
-      {
-        status: 500,
-        headers: { ...corsHeaders },
-      },
-    );
+    throw new Error(error.message);
   }
 }

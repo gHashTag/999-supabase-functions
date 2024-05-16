@@ -1,7 +1,8 @@
 import { model_ai } from "../constants.ts";
 import { openai } from "../openai/client.ts";
 import GPT3Tokenizer from "https://esm.sh/gpt3-tokenizer@1.1.5";
-import { getAiFeedbackT } from "../types/index.ts";
+import { getAiFeedbackT, getAiSupabaseFeedbackT } from "../types/index.ts";
+import { supabase } from "./index.ts";
 
 export const tokenizer = new GPT3Tokenizer({ type: "gpt3" });
 
@@ -43,4 +44,32 @@ export async function getAiFeedback(
   console.log(response, "response");
   const result = await response.json();
   return result.text;
+}
+
+interface Task {
+  id: number;
+  user_id: string;
+  title: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAiFeedbackFromSupabase(
+  { query, id_array }: getAiSupabaseFeedbackT,
+): Promise<{ content: string; tasks: Task[]; data: any }> {
+  try {
+    const { data } = await supabase.functions.invoke("ask-data", {
+      body: JSON.stringify({ query, id_array }),
+    });
+
+    console.log(data, "data");
+    return {
+      content: data.content,
+      tasks: data.tasks,
+      data,
+    };
+  } catch (error) {
+    throw new Error(`Error receiving AI response: ${error}`);
+  }
 }

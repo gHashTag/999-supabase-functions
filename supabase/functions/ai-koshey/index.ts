@@ -1,4 +1,5 @@
-console.log(`Function "ai_kochey_bot" up and running!`);
+// Setup type definitions for built-in Supabase Runtime APIs
+/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
 import {
   Context,
@@ -6,32 +7,34 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-import { getAiFeedbackFromSupabase } from "../get-ai-feedback.ts";
-import { delay, FUNCTION_SECRET } from "../_shared/utils/constants.ts";
-import { createUser } from "../_shared/utils/nextapi/index.ts";
+import { delay, FUNCTION_SECRET } from "../_shared/constants.ts";
+import { createUser } from "../_shared/nextapi/index.ts";
 import {
   aiKosheyUrl,
   botAiKoshey,
   botUsername,
+  bugCatcherRequest,
   handleUpdateAiKoshey,
-} from "../_shared/utils/telegram/bots.ts";
+} from "../_shared/telegram/bots.ts";
 import {
   checkAndReturnUser,
   checkUsernameCodes,
   setSelectedIzbushka,
-} from "../_shared/utils/supabase/users.ts";
+} from "../_shared/supabase/users.ts";
 import {
   getRooms,
   getRoomsCopperPipes,
   getRoomsWater,
   getSelectIzbushkaId,
-} from "../_shared/utils/supabase/rooms.ts";
+} from "../_shared/supabase/rooms.ts";
 import {
   checkPassportByRoomId,
+  getPassportsTasksByUsername,
   setPassport,
-} from "../_shared/utils/supabase/passport.ts";
-import { PassportUser, RoomNode } from "../_shared/utils/types/index.ts";
-import { SUPABASE_URL } from "../_shared/utils/supabase/index.ts";
+} from "../_shared/supabase/passport.ts";
+import { PassportUser, RoomNode } from "../_shared/types/index.ts";
+import { SUPABASE_URL } from "../_shared/supabase/index.ts";
+import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 export type CreateUserT = {
   id: number;
@@ -241,6 +244,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
           await ctx.reply(
             `🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`,
           );
+          await bugCatcherRequest(
+            "ai_koshey_bot (select_izbushka && inviter)",
+            error,
+          );
           return;
         }
       } else {
@@ -274,6 +281,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
         return;
       } catch (error) {
         await ctx.reply(`🤔 Error: checkAndReturnUser.\n${error}`);
+        await bugCatcherRequest(
+          "ai_koshey_bot (select_izbushka && inviter)",
+          error,
+        );
         throw new Error("Error: checkAndReturnUser.");
       }
     }
@@ -283,7 +294,8 @@ botAiKoshey.command("start", async (ctx: Context) => {
 botAiKoshey.on("message:text", async (ctx: Context) => {
   await ctx.replyWithChatAction("typing");
   const inviter = ctx?.message?.text;
-
+  const message = ctx.update.message;
+  const language_code = message?.from?.language_code;
   // Проверяем, является ли сообщение ответом (есть ли reply_to_message)
   if (ctx?.message?.reply_to_message) {
     // Проверяем, содержит ли текст оригинального сообщения определенный текст
@@ -300,8 +312,6 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         );
 
         if (isInviterExist) {
-          const message = ctx.update.message;
-          const language_code = message?.from?.language_code;
           const user = {
             id: message?.from?.id,
             username: message?.from?.username,
@@ -354,58 +364,39 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       } catch (error) {
         console.error(error);
       }
-      // Обрабатываем ответ пользовател
     } else {
-      // const query = ctx?.message?.text;
-      // console.log(query, "query");
-      // try {
-      //   if (query && aiKosheyUrl) {
-      //     const endpoint =
-      //       `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
-
-      //     const { content } = await getAiFeedbackFromSupabase({
-      //       query,
-      //       endpoint: endpoint,
-      //     });
-      //     console.log(content, "content");
-      //     await ctx.reply(content, { parse_mode: "Markdown" });
-      //     return;
-      //   }
-      // } catch (error) {
-      //   console.error("Ошибка при получении ответа AI:", error);
-      //   return;
-      // }
+      console.log("else!!!");
       return;
     }
   } else {
     await ctx.replyWithChatAction("typing");
     const query = ctx?.message?.text;
     console.log(query, "query");
-    try {
-      if (query && aiKosheyUrl) {
-        try {
-          if (query && aiKosheyUrl) {
-            const endpoint =
-              `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
+    const username = ctx?.update?.message?.from?.username;
+    console.log(username, "username");
 
-            const { content } = await getAiFeedbackFromSupabase({
-              query,
-              endpoint: endpoint,
-            });
-            console.log(content, "content");
-            await ctx.reply(content, { parse_mode: "Markdown" });
-            return;
-          }
-        } catch (error) {
-          console.error("Ошибка при получении ответа AI:", error);
-          return;
-        }
+    if (username) {
+      const id_array = await getPassportsTasksByUsername(username);
+      console.log(id_array, "id_array");
+      if (query) {
+        const { content, tasks } = await getAiFeedbackFromSupabase({
+          query,
+          id_array,
+        });
+        getAiFeedbackFromSupabase;
+        let tasksMessage = `📝 ${
+          language_code === "ru" ? "Задачи:\n" : "Tasks:\n"
+        }`;
+        tasks.forEach((task) => {
+          tasksMessage += `\n${task.title}\n${task.description}\n`;
+        });
+
+        await ctx.reply(`${content}\n\n${tasksMessage}`, {
+          parse_mode: "Markdown",
+        });
+        return;
       }
-    } catch (error) {
-      console.error("Ошибка при получении ответа AI:", error);
-      return;
     }
-    return;
   }
 });
 
@@ -507,6 +498,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       return;
     } catch (error) {
       console.error(error);
+      await bugCatcherRequest("ai_koshey_bot (name_izbushka)", error);
+      throw new Error("ai_koshey_bot (name_izbushka)");
     }
   }
 
@@ -540,29 +533,37 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         });
       } else {
         await ctx.reply("Ошибка: не удалось загрузить избушки.");
+        await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
+        throw new Error("ai_koshey_bot (show_izbushka)");
       }
       return;
     } catch (error) {
       console.error("error show_izbushka", error);
-      return;
+      await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
+      throw new Error("ai_koshey_bot (show_izbushka)");
     }
   }
 
   if (callbackData.includes("select_izbushka")) {
-    const select_izbushka = callbackData.split("_")[2];
-    console.log(select_izbushka, "select_izbushka");
-    if (select_izbushka) {
-      username && await setSelectedIzbushka(username, select_izbushka);
-    }
+    try {
+      const select_izbushka = callbackData.split("_")[2];
+      console.log(select_izbushka, "select_izbushka");
+      if (select_izbushka) {
+        username && await setSelectedIzbushka(username, select_izbushka);
+      }
 
-    await ctx.reply(
-      `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
-    );
-    await delay(500);
-    await ctx.reply(
-      `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
-    );
-    return;
+      await ctx.reply(
+        `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
+      );
+      await delay(500);
+      await ctx.reply(
+        `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
+      );
+      return;
+    } catch (error) {
+      await bugCatcherRequest("ai_koshey_bot (select_izbushka)", error);
+      throw new Error("ai_koshey_bot (select_izbushka)");
+    }
   }
 });
 
@@ -608,8 +609,10 @@ botAiKoshey.catch((err) => {
     console.error("Error in request:", e.description);
   } else if (e instanceof HttpError) {
     console.error("Could not contact Telegram:", e);
+    throw e;
   } else {
     console.error("Unknown error:", e);
+    throw e;
   }
 });
 

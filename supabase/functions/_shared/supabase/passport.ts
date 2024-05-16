@@ -159,6 +159,27 @@ export async function getPassportByRoomId(
   }
 }
 
+export async function getPassportsTasksByUsername(
+  username: string,
+): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.from("user_passport")
+      .select("*")
+      .eq("username", username)
+      .eq("type", "task");
+
+    if (error) {
+      throw new Error(
+        "Error getPassportsTasksByUsername: " + JSON.stringify(error),
+      );
+    }
+    console.log(data, "data");
+    return data.map((item) => item.task_id);
+  } catch (error) {
+    throw new Error("Error getPassportsTasksByUsername: " + error);
+  }
+}
+
 export async function checkPassportByRoomId(
   user_id: string,
   room_id: string,

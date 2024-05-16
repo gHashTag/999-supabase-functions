@@ -1,5 +1,3 @@
-export const DEV = Deno.env.get("DEV") === "true" ? true : false;
-
 if (!Deno.env.get("LOCAL_URL")) {
   throw new Error("LOCAL_URL is not set");
 }
@@ -19,6 +17,8 @@ if (!Deno.env.get("SUPABASE_URL")) {
 if (!Deno.env.get("FUNCTION_SECRET")) {
   throw new Error("FUNCTION_SECRET is not set");
 }
+
+export const DEV = Deno.env.get("DEV") === "true" ? true : false;
 
 export const SITE_URL = DEV
   ? Deno.env.get("LOCAL_URL")
