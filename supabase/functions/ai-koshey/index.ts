@@ -7,10 +7,9 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-import { delay, FUNCTION_SECRET } from "../_shared/constants.ts";
+import { delay } from "../_shared/constants.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import {
-  aiKosheyUrl,
   botAiKoshey,
   botUsername,
   bugCatcherRequest,
@@ -33,7 +32,6 @@ import {
   setPassport,
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
-import { SUPABASE_URL } from "../_shared/supabase/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 export type CreateUserT = {

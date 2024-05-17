@@ -57,6 +57,10 @@ if (!Deno.env.get("AI_BABA_YAGA_CHAT_ID")) {
   throw new Error("AI_BABA_YAGA_CHAT_ID is not set");
 }
 
+if (!Deno.env.get("TELEGRAM_BOT_BUG_CATCHER_DEV")) {
+  throw new Error("TELEGRAM_BOT_BUG_CATCHER_DEV is not set");
+}
+
 export const bugCatcherDevBotToken = Deno.env.get(
   "TELEGRAM_BOT_BUG_CATCHER_DEV",
 );
@@ -72,9 +76,10 @@ export const logBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN_LOG");
 export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
 
 const token = DEV ? tokenTest : tokenProd;
+console.log(token, "token");
 
 export const botAiKoshey = new Bot(token || "");
-
+console.log(logBotToken, "logBotToken");
 export const logBot = new Bot(logBotToken || "");
 export const bugCatcherDevBot = new Bot(bugCatcherDevBotToken || "");
 export const babaYagaChatId = Deno.env.get("AI_BABA_YAGA_CHAT_ID");
