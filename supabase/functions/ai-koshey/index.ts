@@ -167,16 +167,6 @@ botAiKoshey.command("start", async (ctx: Context) => {
               );
 
               if (!isUserExist) {
-                console.log("!isUserExist");
-                console.log(
-                  first_name,
-                  last_name,
-                  username,
-                  message?.from?.id,
-                  message?.from?.is_bot,
-                  message?.from?.language_code,
-                  message?.chat?.id,
-                );
                 if (
                   first_name && last_name && username &&
                   message?.from?.id &&
@@ -245,14 +235,15 @@ botAiKoshey.command("start", async (ctx: Context) => {
                     }
                     language_code && await startIzbushka(ctx, language_code);
                   } else {
+                    const textError = `${
+                      language_code === "ru"
+                        ? "🤔 Ошибка: getSelectIzbushkaId."
+                        : "🤔 Error: getSelectIzbushkaId."
+                    }\n${izbushka}`;
                     await ctx.reply(
-                      `${
-                        language_code === "ru"
-                          ? "🤔 Ошибка: getSelectIzbushkaId."
-                          : "🤔 Error: getSelectIzbushkaId."
-                      }\n${izbushka}`,
+                      textError,
                     );
-                    throw new Error("Error: getSelectIzbushkaId.");
+                    throw new Error(textError);
                   }
                   return;
                 }
@@ -260,13 +251,12 @@ botAiKoshey.command("start", async (ctx: Context) => {
             }
           }
         } catch (error) {
-          await ctx.reply(
-            `${
-              language_code === "ru"
-                ? "🤔 Что-то пошло не так, попробуйте ещё раз."
-                : "🤔 Something went wrong, try again."
-            }\n${error}`,
-          );
+          const textError = `${
+            language_code === "ru"
+              ? "🤔 Что-то пошло не так, попробуйте ещё раз."
+              : "🤔 Something went wrong, try again."
+          }\n${error}`;
+          await ctx.reply(textError);
           await bugCatcherRequest(
             "ai_koshey_bot (select_izbushka && inviter)",
             error,
@@ -364,13 +354,13 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           );
           return;
         } else {
-          const text = `🔒 ${
+          const textError = `🔒 ${
             language_code === "ru"
               ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления."
               : "Oh, my apologies! The word that came to me, the secret does not answer. Please, tell me another word that is the key to the right path, so that the path of your life is a strange and open way to the kingdom."
           }`;
           await ctx.reply(
-            text,
+            textError,
             {
               reply_markup: {
                 force_reply: true,
@@ -454,39 +444,39 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
         await ctx.replyWithChatAction("typing");
         if (type === "fire") {
-          const text = `🔥 ${
+          const textFire = `🔥 ${
             language_code === "ru"
               ? "Пламя горячее - это личные избушки, где твои слова пишутся и задачи создаются."
               : "Fire is a private room where your words are written and tasks are created."
           }`;
           await ctx.reply(
-            text,
+            textFire,
             {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
           return;
         } else if (type === "water") {
-          const text = `💧 ${
+          const textWater = `💧 ${
             language_code === "ru"
               ? "Воды чистые к себе манят, где гость ты в избушках дорогой."
               : "Water is pure to you, where guests are in the private rooms."
           }`;
           await ctx.reply(
-            text,
+            textWater,
             {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
           return;
         } else if (type === "copper_pipes") {
-          const text = `🎺 ${
+          const textCopperPipes = `🎺 ${
             language_code === "ru"
               ? "Медные трубы - это чародейские избушки, где обучение к мудрости тебя ведет."
               : "Copper pipes are the sacred huts where the training to wisdom guides you."
           }`;
           await ctx.reply(
-            text,
+            textCopperPipes,
             {
               reply_markup: { inline_keyboard: keyboard },
             },
@@ -495,22 +485,22 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         }
         return;
       } else {
-        const text = `${
+        const textError = `${
           language_code === "ru"
             ? "У вас нет избушек куда вас пригласили"
             : "You don't have any rooms where you were invited"
         }`;
-        await ctx.reply(text);
+        await ctx.reply(textError);
         return;
       }
     } catch (error) {
-      const text = `${
+      const textError = `${
         language_code === "ru"
           ? "Ошибка при выборе избушки"
           : "Error selecting the room"
       }`;
-      await ctx.reply(text, error);
-      throw new Error(text);
+      await ctx.reply(textError, error);
+      throw new Error(textError);
     }
   };
 
@@ -527,12 +517,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   if (callbackData === "name_izbushka") {
     try {
-      const text = `${
+      const textQuestion = `${
         language_code === "ru"
           ? "Как назовем избушку?"
           : "How do we name the room?"
       }`;
-      await ctx.reply(text, {
+      await ctx.reply(textQuestion, {
         reply_markup: {
           force_reply: true,
         },
@@ -550,10 +540,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     // console.log(rooms, "rooms");
     try {
       if (Array.isArray(rooms)) {
-        const text = `${
+        const textSelectRoom = `${
           language_code === "ru" ? "🏡 Выберите избушку" : "Select the room"
         }`;
-        await ctx.reply(text, {
+        await ctx.reply(textSelectRoom, {
           reply_markup: {
             inline_keyboard: rooms
               .filter((room: RoomNode) => room)
@@ -577,12 +567,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
           },
         });
       } else {
-        const text = `${
+        const textError = `${
           language_code === "ru"
             ? "Ошибка: не удалось загрузить избушки."
             : "Error: failed to load room."
         }`;
-        await ctx.reply(text);
+        await ctx.reply(textError);
         await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
         throw new Error("ai_koshey_bot (show_izbushka)");
       }
@@ -597,17 +587,17 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   if (callbackData.includes("select_izbushka")) {
     try {
       const select_izbushka = callbackData.split("_")[2];
-      console.log(select_izbushka, "select_izbushka");
+
       if (select_izbushka) {
         username && await setSelectedIzbushka(username, select_izbushka);
       }
-      const text = `${
+      const textForInvite = `${
         language_code === "ru"
           ? '📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.'
           : 'What, traveler, to start the broadcast, press the "Izbushka" button more joyfully and laugh, because all is prepared for the start of your journey through the digital spaces! \n\n🌟 Share the following link with the person you want to meet in the hut on the curved tips of the hut.'
       }`;
       await ctx.reply(
-        text,
+        textForInvite,
       );
       await delay(500);
       const textInvite = `${
@@ -623,29 +613,6 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     }
   }
 });
-
-// botAiKoshey.on("message:text", async (ctx) => {
-//   await ctx.replyWithChatAction("typing");
-//   const query = ctx?.message?.text;
-//   console.log(query, "query");
-//   try {
-//     if (query && aiKosheyUrl) {
-//       const endpoint =
-//         `${SUPABASE_URL}/functions/v1/ask-data?secret=${FUNCTION_SECRET}`;
-//       console.log(endpoint, "endpoint");
-//       const feedback = await getAiFeedbackFromSupabase({
-//         query,
-//         endpoint: endpoint,
-//       });
-//       await ctx.reply(feedback, { parse_mode: "Markdown" });
-//       return;
-//     }
-//   } catch (error) {
-//     console.error("Ошибка при получении ответа AI:", error);
-//     return;
-//   }
-//   return;
-// });
 
 await botAiKoshey.api.setMyCommands([
   {
