@@ -5,12 +5,7 @@ import { oneLine, stripIndent } from "https://esm.sh/common-tags@1.8.2";
 import { supabase } from "../_shared/supabase/index.ts";
 
 import { getCompletion, model, tokenizer } from "../_shared/supabase/ai.ts";
-
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "../_shared/handleCORS.ts";
 
 serve(async (req: Request) => {
   // ask-custom-data logic
@@ -20,7 +15,7 @@ serve(async (req: Request) => {
 
   // Search query is passed in request payload
   const { query, id_array } = await req.json();
-  console.log(query, "query");
+
   // OpenAI recommends replacing newlines with spaces for best results
   const input = query.replace(/\n/g, " ");
   console.log(input, "input");
@@ -56,15 +51,16 @@ serve(async (req: Request) => {
   let tokenCount = 0;
   console.log(tokenCount, "tokenCount");
   let contextText = "";
-  console.log(contextText, "contextText");
+
   // Concat matched documents
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i];
-    console.log(task, "task");
-    const content = `${task.title}\n${task.description}`;
-    console.log(content, "content");
+
+    const content =
+      `${task.title}\n${task.description}\n${task.created_at}\n${task.updated_at}`;
+
     const encoded = tokenizer.encode(content);
-    console.log(encoded.text.length, "encoded.text.length");
+
     tokenCount += encoded.text.length;
 
     // Limit context to max 1500 tokens (configurable)

@@ -7,7 +7,6 @@ import { translateText } from "../_shared/translateText.ts";
 
 import { createChatCompletionJson } from "../_shared/openai/createChatCompletionJson.ts";
 
-import { headers } from "../_shared/headers.ts";
 import { createEmoji } from "../_shared/openai/createEmoji.ts";
 
 import { SITE_URL } from "../_shared/constants.ts";
@@ -20,8 +19,9 @@ import { getRoomById } from "../_shared/supabase/rooms.ts";
 import { PassportUser, TranscriptionAsset } from "../_shared/types/index.ts";
 import { createTask, updateTaskByPassport } from "../_shared/supabase/tasks.ts";
 import { setRoomAsset } from "../_shared/supabase/room_assets.ts";
-import { corsHeaders } from "../ask-data/index.ts";
+
 import { getWorkspaceById } from "../_shared/supabase/workspaces.ts";
+import { corsHeaders, headers } from "../_shared/handleCORS.ts";
 
 type Task = {
   id: string;
