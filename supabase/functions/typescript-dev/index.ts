@@ -1,13 +1,3 @@
-import { pathIncrement } from "../path-increment.ts";
-
-import { checkSubscription } from "../check-subscription.ts";
-import {
-  handleUpdateTypeScript,
-  typeScriptDevBot,
-} from "../_shared/telegram/bots.ts";
-import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
-import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
-import { createUser, getUid } from "../_shared/supabase/users.ts";
 import {
   getBiggest,
   getCorrects,
@@ -17,11 +7,31 @@ import {
   updateProgress,
   updateResult,
 } from "../_shared/supabase/progress.ts";
-import { getAiFeedback } from "../_shared/supabase/ai.ts";
+import { getUid } from "../_shared/supabase/users.ts";
+import { pathIncrement } from "../path-increment.ts";
+
+import { checkSubscription } from "../check-subscription.ts";
+import {
+  handleUpdateTypeScript,
+  typeScriptDevBot,
+} from "../_shared/telegram/bots.ts";
+import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
+import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
+import { createUser } from "../_shared/nextapi/index.ts";
+import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 typeScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  createUser(ctx);
+  await createUser({
+    username: ctx.from?.username || "",
+    first_name: ctx.from?.first_name || "",
+    last_name: ctx.from?.last_name || "",
+    is_bot: ctx.from?.is_bot || false,
+    language_code: ctx.from?.language_code || "",
+    chat_id: ctx.chat.id,
+    telegram_id: ctx.from?.id || 0,
+    inviter: "",
+  });
   const isSubscription = await checkSubscription(
     ctx,
     ctx.from?.id || 0,
@@ -45,8 +55,8 @@ typeScriptDevBot.command("start", async (ctx) => {
     );
   } else if (isSubscription === false) {
     const messageText = isRu
-      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
-      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
+      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите TypeScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
+      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn TypeScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
     await ctx.replyWithPhoto(
       isRu
         ? "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ca0YPRgNGBINCQ0LLRgtC+0LzQsNGC0LjQt9Cw0YbQuNGP8J+kliBCb3RNb3RoZXJf0J/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40LUg0L/QvtC0INGA0YPQutC+0LLQvtC00YHRgtCy0L7QvCDQvdC10LnRgNC+0L3QvdGL0YUg0L/QvtC80L7RidC90LjQutC+0LIuINCS0Ysg0LjQt9GD0YfQuNGC0LUgSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwg0KLQsNGBdCwgR3JhcGhRTCwgQXBvbGxvINC4INC40L3RgtC10LPRgNCw0YbQuNGOINGBINCx0LvQvtC60YfQtdC50L3QvtC8IFRPTiDQuCBUZWxlZ3JhbSBNaW5pIEFwcF8xNzE0NzE1NDA4"
@@ -73,16 +83,14 @@ typeScriptDevBot.on("message:text", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   console.log(ctx);
   const query = ctx.message.text;
-  const endpoint =
-    "https://flowiseai-railway-production-758e.up.railway.app/api/v1/prediction/46937ed0-41df-4c9c-80f9-f3056a1b81c9";
-  const token = `${Deno.env.get("FLOWISE_AI_TYPESCRIPT_DEV")}`;
 
   try {
-    const feedback = await getAiFeedback({ query, endpoint, token });
-    await ctx.reply(feedback, { parse_mode: "Markdown" });
+    const feedback = await getAiFeedbackFromSupabase({ query });
+    await ctx.reply(feedback.content, { parse_mode: "Markdown" });
     return;
   } catch (error) {
     console.error("Ошибка при получении ответа AI:", error);
+    throw error;
   }
 });
 
@@ -93,9 +101,10 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
   const isHaveAnswer = callbackData.split("_").length === 4;
   const isRu = ctx.from?.language_code === "ru";
 
+  await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
   if (callbackData === "start_test") {
     try {
-      resetProgress({
+      await resetProgress({
         username: ctx.callbackQuery.from.username || "",
         language: "typescript",
       });
@@ -115,10 +124,19 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           topic_en: enTopic,
         } = questions[0];
 
+        const user_id = await getUid(ctx.callbackQuery.from.username || "");
+        if (!user_id) {
+          await ctx.reply("Пользователь не найден.");
+          return;
+        }
         const topic = isRu ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
         // Формируем сообщение
         const messageText =
-          `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> 0 $IGLA </b>`;
+          `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
 
         // Формируем кнопки
         const inlineKeyboard = [
@@ -204,11 +222,13 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
         return;
       }
       console.log(user_id);
-      const correctAnswers = await getCorrects({ user_id, language });
-      const allAnswers = await getCorrects({ user_id, language: "all" });
+      const allAnswers = await getCorrects({
+        user_id: user_id.toString(),
+        language: "all",
+      });
       // Формируем сообщение
       const messageText =
-        `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA</b>`;
+        `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
 
       // Формируем кнопки
       const inlineKeyboard = [
@@ -280,13 +300,23 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           isTrueAnswer = false;
           await ctx.reply("❌");
         }
-        await updateProgress({ user_id, isTrue: isTrueAnswer, language });
-        const newPath = pathIncrement({
-          path,
-          isSubtopic: biggestSubtopic === Number(subtopic) ? false : true,
+        await updateProgress({
+          user_id: user_id.toString(),
+          isTrue: isTrueAnswer,
+          language,
         });
-        const correctAnswers = await getCorrects({ user_id, language });
-        const allAnswers = await getCorrects({ user_id, language: "all" });
+        const newPath = await pathIncrement({
+          path,
+          isSubtopic: biggestSubtopic === subtopic ? false : true,
+        });
+        const correctAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language,
+        });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
 
         const lastCallbackContext = await getLastCallback(language);
         console.log(lastCallbackContext);
@@ -297,26 +327,26 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
             const correctProcent = correctAnswers * 0.8;
             if (correctProcent >= 80) {
               await updateResult({
-                user_id,
+                user_id: user_id.toString(),
                 language,
                 value: true,
               });
               await ctx.reply(
                 isRu
-                  ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Ваш результат: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`
-                  : `<b>🥳 Congratulations, you passed the test!</b>\n\n Your result: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`,
+                  ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥳 Congratulations, you passed the test!</b>\n\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             } else {
               await updateResult({
-                user_id,
+                user_id: user_id.toString(),
                 language,
                 value: false,
               });
               await ctx.reply(
                 isRu
-                  ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`
-                  : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`,
+                  ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             }
@@ -335,7 +365,7 @@ typeScriptDevBot.on("callback_query:data", async (ctx) => {
           const topic = isRu ? ruTopic : enTopic;
           // Формируем сообщение
           const messageText =
-            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> ${correctAnswers} $IGLA\n Total: ${allAnswers}</b>`;
+            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> Total: ${allAnswers} $IGLA</b>`;
 
           // Формируем кнопки
           const inlineKeyboard = [
@@ -377,7 +407,11 @@ typeScriptDevBot.catch((err) => {
   console.error(`Error while handling update ${ctx.update.update_id}:`);
   const e = err.error;
   if (e instanceof GrammyError) {
-    console.error("Error in request:", e.description);
+    if (e.description.includes("bot was blocked by the user")) {
+      throw new Error(`Bot was blocked by the user ${ctx.from?.username}`);
+    } else {
+      throw new Error(e.description);
+    }
   } else if (e instanceof HttpError) {
     console.error("Could not contact Telegram:", e);
   } else {
@@ -388,13 +422,15 @@ typeScriptDevBot.catch((err) => {
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
-    console.log(req);
     if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
       return new Response("not allowed", { status: 405 });
     }
-
-    return await handleUpdateTypeScript(req);
+    const { content, tasks, data } = await handleUpdateTypeScript(req);
+    return new Response(JSON.stringify({ content, tasks, data }), {
+      status: 200,
+    });
   } catch (err) {
     console.error(err);
   }
+  return new Response("Endpoint not found", { status: 404 });
 });

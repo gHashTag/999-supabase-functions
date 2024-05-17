@@ -1,3 +1,13 @@
+import {
+  getBiggest,
+  getCorrects,
+  getLastCallback,
+  getQuestion,
+  resetProgress,
+  updateProgress,
+  updateResult,
+} from "../_shared/supabase/progress.ts";
+import { getUid } from "../_shared/supabase/users.ts";
 import { pathIncrement } from "../path-increment.ts";
 
 import { checkSubscription } from "../check-subscription.ts";
@@ -5,22 +15,23 @@ import {
   handleUpdateReactNative,
   reactNativeDevBot,
 } from "../_shared/telegram/bots.ts";
-import { HttpError } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
-import { GrammyError } from "https://deno.land/x/grammy@v1.8.3/core/error.ts";
-import { createUser, getUid } from "../_shared/supabase/users.ts";
-import { getAiFeedback } from "../_shared/supabase/ai.ts";
-import {
-  getBiggest,
-  getCorrects,
-  getLastCallback,
-  getQuestion,
-  updateProgress,
-  updateResult,
-} from "../_shared/supabase/progress.ts";
+import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
+import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
+import { createUser } from "../_shared/nextapi/index.ts";
+import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 
 reactNativeDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  createUser(ctx);
+  await createUser({
+    username: ctx.from?.username || "",
+    first_name: ctx.from?.first_name || "",
+    last_name: ctx.from?.last_name || "",
+    is_bot: ctx.from?.is_bot || false,
+    language_code: ctx.from?.language_code || "",
+    chat_id: ctx.chat.id,
+    telegram_id: ctx.from?.id || 0,
+    inviter: "",
+  });
   const isSubscription = await checkSubscription(
     ctx,
     ctx.from?.id || 0,
@@ -31,9 +42,9 @@ reactNativeDevBot.command("start", async (ctx) => {
   if (isSubscription === true) {
     await ctx.reply(
       isRu
-        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования Python с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы Python, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир Python? \nНачать тест(кнопка)`
-        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn Python programming language with artificial intelligence! Here you can not only learn the basics of Python, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of Python? \nStart Test(button)`,
-      // ctx.t("startPython"),
+        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования React Native с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы React Native, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир ReactNative? \nНачать тест(кнопка)`
+        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn React Native programming language with artificial intelligence! Here you can not only learn the basics of React Native, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of ReactNative? \nStart Test(button)`,
+      // ctx.t("startReactNative"),
       {
         reply_markup: {
           inline_keyboard: [
@@ -72,16 +83,14 @@ reactNativeDevBot.on("message:text", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   console.log(ctx);
   const query = ctx.message.text;
-  const endpoint =
-    "https://flowiseai-railway-production-758e.up.railway.app/api/v1/prediction/46937ed0-41df-4c9c-80f9-f3056a1b81c9";
-  const token = `${Deno.env.get("FLOWISE_AI_REACTNATIVE_DEV")}`;
 
   try {
-    const feedback = await getAiFeedback({ query, endpoint, token });
-    await ctx.reply(feedback, { parse_mode: "Markdown" });
+    const feedback = await getAiFeedbackFromSupabase({ query });
+    await ctx.reply(feedback.content, { parse_mode: "Markdown" });
     return;
   } catch (error) {
     console.error("Ошибка при получении ответа AI:", error);
+    throw error;
   }
 });
 
@@ -92,11 +101,12 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
   const isHaveAnswer = callbackData.split("_").length === 4;
   const isRu = ctx.from?.language_code === "ru";
 
+  await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
   if (callbackData === "start_test") {
     try {
-      resetProgress({
+      await resetProgress({
         username: ctx.callbackQuery.from.username || "",
-        language: "python",
+        language: "reactnative",
       });
       const questionContext = {
         lesson_number: 1,
@@ -105,7 +115,7 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
 
       const questions = await getQuestion({
         ctx: questionContext,
-        language: "python",
+        language: "reactnative",
       });
       if (questions.length > 0) {
         const {
@@ -114,16 +124,25 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
           topic_en: enTopic,
         } = questions[0];
 
+        const user_id = await getUid(ctx.callbackQuery.from.username || "");
+        if (!user_id) {
+          await ctx.reply("Пользователь не найден.");
+          return;
+        }
         const topic = isRu ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
         // Формируем сообщение
         const messageText =
-          `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> 0 $IGLA </b>`;
+          `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
 
         // Формируем кнопки
         const inlineKeyboard = [
           [{
             text: "Перейти к вопросу",
-            callback_data: `python_01_01`,
+            callback_data: `reactnative_01_01`,
           }],
         ];
 
@@ -203,11 +222,13 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
         return;
       }
       console.log(user_id);
-      const correctAnswers = await getCorrects({ user_id, language });
-      const allAnswers = await getCorrects({ user_id, language: "all" });
+      const allAnswers = await getCorrects({
+        user_id: user_id.toString(),
+        language: "all",
+      });
       // Формируем сообщение
       const messageText =
-        `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA</b>`;
+        `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
 
       // Формируем кнопки
       const inlineKeyboard = [
@@ -279,13 +300,23 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
           isTrueAnswer = false;
           await ctx.reply("❌");
         }
-        await updateProgress({ user_id, isTrue: isTrueAnswer, language });
+        await updateProgress({
+          user_id: user_id.toString(),
+          isTrue: isTrueAnswer,
+          language,
+        });
         const newPath = await pathIncrement({
           path,
-          isSubtopic: biggestSubtopic === Number(subtopic) ? false : true,
+          isSubtopic: biggestSubtopic === subtopic ? false : true,
         });
-        const correctAnswers = await getCorrects({ user_id, language });
-        const allAnswers = await getCorrects({ user_id, language: "all" });
+        const correctAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language,
+        });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
 
         const lastCallbackContext = await getLastCallback(language);
         console.log(lastCallbackContext);
@@ -296,26 +327,26 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
             const correctProcent = correctAnswers * 0.8;
             if (correctProcent >= 80) {
               await updateResult({
-                user_id,
+                user_id: user_id.toString(),
                 language,
                 value: true,
               });
               await ctx.reply(
                 isRu
-                  ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Ваш результат: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`
-                  : `<b>🥳 Congratulations, you passed the test!</b>\n\n Your result: ${correctAnswers} $IGLA\n Total: ${allAnswers} $IGLA`,
+                  ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥳 Congratulations, you passed the test!</b>\n\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             } else {
               await updateResult({
-                user_id,
+                user_id: user_id.toString(),
                 language,
                 value: false,
               });
               await ctx.reply(
                 isRu
-                  ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`
-                  : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n : ${correctAnswers} $IGLA.\n Total: ${allAnswers} $IGLA`,
+                  ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             }
@@ -334,7 +365,7 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
           const topic = isRu ? ruTopic : enTopic;
           // Формируем сообщение
           const messageText =
-            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> ${correctAnswers} $IGLA\n Total: ${allAnswers}</b>`;
+            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> Total: ${allAnswers} $IGLA</b>`;
 
           // Формируем кнопки
           const inlineKeyboard = [
@@ -376,7 +407,11 @@ reactNativeDevBot.catch((err) => {
   console.error(`Error while handling update ${ctx.update.update_id}:`);
   const e = err.error;
   if (e instanceof GrammyError) {
-    console.error("Error in request:", e.description);
+    if (e.description.includes("bot was blocked by the user")) {
+      throw new Error(`Bot was blocked by the user ${ctx.from?.username}`);
+    } else {
+      throw new Error(e.description);
+    }
   } else if (e instanceof HttpError) {
     console.error("Could not contact Telegram:", e);
   } else {
@@ -387,13 +422,15 @@ reactNativeDevBot.catch((err) => {
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
-    console.log(req);
     if (url.searchParams.get("secret") !== Deno.env.get("FUNCTION_SECRET")) {
       return new Response("not allowed", { status: 405 });
     }
-
-    return await handleUpdateReactNative(req);
+    const { content, tasks, data } = await handleUpdateReactNative(req);
+    return new Response(JSON.stringify({ content, tasks, data }), {
+      status: 200,
+    });
   } catch (err) {
     console.error(err);
   }
+  return new Response("Endpoint not found", { status: 404 });
 });
