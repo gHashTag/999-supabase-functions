@@ -64,7 +64,7 @@ serve(async (req: Request) => {
     tokenCount += encoded.text.length;
 
     // Limit context to max 1500 tokens (configurable)
-    if (tokenCount > 1500) {
+    if (tokenCount > 1000000) {
       throw new Response("Context too long", { status: 400 });
     }
 

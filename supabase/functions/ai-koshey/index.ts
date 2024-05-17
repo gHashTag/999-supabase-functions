@@ -48,30 +48,38 @@ export type CreateUserT = {
   select_izbushka: string;
 };
 
-const startIzbushka = async (ctx: Context) => {
+const startIzbushka = async (ctx: Context, language_code: string) => {
+  const text = language_code === "ru"
+    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
+    : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
   await ctx.reply(
-    `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`,
+    text,
   );
   return;
 };
 
-const welcomeMenu = async (ctx: Context) => {
+const welcomeMenu = async (ctx: Context, language_code: string) => {
+  const text = language_code === "ru"
+    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`
+    : `🏰 The hut turned its front to you, and its back to the forest. If you go to the left you will be warmed by the fire, you will go straight ahead in the water and you will rejuvenate, and to the right you will go into a copper pipe.`;
   await ctx.reply(
-    `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`,
+    text,
     {
       reply_markup: {
         inline_keyboard: [
           [
             {
-              text: "🔥 Огонь",
+              text: `🔥 ${language_code === "ru" ? "Огонь" : "Fire"}`,
               callback_data: "fire",
             },
             {
-              text: "💧 Вода",
+              text: `💧 ${language_code === "ru" ? "Вода" : "Water"}`,
               callback_data: "water",
             },
             {
-              text: "🎺 Медные трубы",
+              text: `🎺 ${
+                language_code === "ru" ? "Медные трубы" : "Copper pipes"
+              }`,
               callback_data: "copper_pipes",
             },
           ],
@@ -82,9 +90,12 @@ const welcomeMenu = async (ctx: Context) => {
   return;
 };
 
-const welcomeMessage = async (ctx: Context) => {
+const welcomeMessage = async (ctx: Context, language_code: string) => {
+  const text = language_code === "ru"
+    ? `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`
+    : `🏰 Welcome, ${ctx?.update?.message?.from?.first_name}! \nThe all-powerful Babya Yaga, the ruler of secrets and charms, is preparing to confront you with the gates of the unknown world.\nTo save you from the front and not the back, remember to speak the word-a-word.`;
   await ctx.reply(
-    `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`,
+    text,
     {
       reply_markup: {
         force_reply: true,
@@ -102,46 +113,58 @@ const intro = ({ language_code = "en" }: { language_code?: string }) => {
   return intro;
 };
 
+const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
+  const menuButton = [
+    [
+      {
+        text: `🔥 ${language_code === "ru" ? "Огонь" : "Fire"}`,
+        callback_data: "fire",
+      },
+      {
+        text: `🎺 ${language_code === "ru" ? "Медные трубы" : "Copper pipes"}`,
+        callback_data: "copper_pipes",
+      },
+      {
+        text: `💧 ${language_code === "ru" ? "Вода" : "Water"}`,
+        callback_data: "water",
+      },
+    ],
+  ];
+  return menuButton;
+};
+
 // Обработчик команды "start"
 botAiKoshey.command("start", async (ctx: Context) => {
-  console.log("start"); // Вывод в консоль сообщения "start"
-  await ctx.replyWithChatAction("typing"); // Отправка действия набора сообщения в чате
+  await ctx.replyWithChatAction("typing");
 
-  // Получение параметров из текста сообщения
   const params = ctx?.message?.text && ctx?.message?.text.split(" ")[1];
-  console.log(params, "params");
+
   const message = ctx.update.message;
   const username = message?.from?.username;
+  const language_code = message?.from?.language_code;
 
   if (params) {
-    const underscoreIndex = params.indexOf("_"); // Находим индекс первого символа '_'
+    const underscoreIndex = params.indexOf("_"); // Search for the index of the first '_'
     if (underscoreIndex !== -1) {
-      const select_izbushka = params.substring(0, underscoreIndex); // Извлекаем часть до '_'
-      const inviter = params.substring(underscoreIndex + 1); // Извлекаем всё после '_'
+      const select_izbushka = params.substring(0, underscoreIndex); // Extract the part before '_'
+      const inviter = params.substring(underscoreIndex + 1); // Extract all after '_'
 
-      console.log(select_izbushka, "select_izbushka"); // Выводит "100"
-      console.log(inviter, "inviter"); // Выводит "ai_koshey_more"
-
-      // Проверка наличия выбранной избушки и пригласившего пользователя
+      // Check if the selected hut and inviter exist
       if (select_izbushka && inviter) {
         try {
-          // Проверка существования пригласившего пользователя
+          // Check if the inviter exists
           const { isInviterExist, inviter_user_id, invitation_codes } =
             await checkUsernameCodes(inviter);
 
           if (isInviterExist && invitation_codes) {
-            console.log(isInviterExist, "isInviterExist");
-
             const first_name = message?.from?.first_name;
             const last_name = message?.from?.last_name;
 
             if (username) {
-              // Проверка существования пользователя и создание его, если его нет
-
+              // Check if the user exists and create it if it doesn't
               const { isUserExist } = await checkAndReturnUser(
                 username,
               );
-              console.log(isUserExist, "isUserExist"); // Вывод информации о пользователе
 
               if (!isUserExist) {
                 console.log("!isUserExist");
@@ -172,11 +195,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
                     telegram_id: message?.from?.id,
                     select_izbushka,
                   };
-                  console.log(userObj, "userObj");
-                  const newUser = await createUser(userObj);
-                  console.log(newUser, "newUser");
 
-                  await welcomeMenu(ctx);
+                  await createUser(userObj);
+
+                  language_code && await welcomeMenu(ctx, language_code);
                   return;
                 }
               } else {
@@ -184,11 +206,10 @@ botAiKoshey.command("start", async (ctx: Context) => {
                   username,
                 );
                 if (isUserExist) {
-                  console.log(select_izbushka, "select_izbushka");
                   const { izbushka } = await getSelectIzbushkaId(
                     select_izbushka,
                   );
-                  console.log(izbushka, "izbushka");
+
                   if (
                     izbushka && user && first_name && last_name &&
                     user.telegram_id && izbushka.workspace_id
@@ -205,17 +226,13 @@ botAiKoshey.command("start", async (ctx: Context) => {
                       is_owner: false,
                       photo_url: user.photo_url || null,
                     };
-                    console.log(passport_user, "passport_user");
 
-                    // проверить есть ли у юзера паспорт к этой избушке и не выдовать если есть
-                    console.log(user.user_id, "user.user_id");
-                    console.log(izbushka.room_id, "izbushka.room_id");
                     const isPassportExist = await checkPassportByRoomId(
                       user.user_id,
                       izbushka.room_id,
                       "room",
                     );
-                    console.log(isPassportExist, "isPassportExist");
+
                     if (!isPassportExist) {
                       await setPassport(passport_user);
                     }
@@ -226,10 +243,14 @@ botAiKoshey.command("start", async (ctx: Context) => {
                         select_izbushka,
                       );
                     }
-                    await startIzbushka(ctx);
+                    language_code && await startIzbushka(ctx, language_code);
                   } else {
                     await ctx.reply(
-                      `🤔 Error: getSelectIzbushkaId.\n${izbushka}`,
+                      `${
+                        language_code === "ru"
+                          ? "🤔 Ошибка: getSelectIzbushkaId."
+                          : "🤔 Error: getSelectIzbushkaId."
+                      }\n${izbushka}`,
                     );
                     throw new Error("Error: getSelectIzbushkaId.");
                   }
@@ -240,7 +261,11 @@ botAiKoshey.command("start", async (ctx: Context) => {
           }
         } catch (error) {
           await ctx.reply(
-            `🤔 Что-то пошло не так, попробуйте ещё раз.\n${error}`,
+            `${
+              language_code === "ru"
+                ? "🤔 Что-то пошло не так, попробуйте ещё раз."
+                : "🤔 Something went wrong, try again."
+            }\n${error}`,
           );
           await bugCatcherRequest(
             "ai_koshey_bot (select_izbushka && inviter)",
@@ -250,13 +275,12 @@ botAiKoshey.command("start", async (ctx: Context) => {
         }
       } else {
         if (username) {
-          // Проверка существования пользователя и отправка соответствующего сообщения
+          // Check if the user exists and send the corresponding message
           const { isUserExist } = await checkAndReturnUser(username);
-          console.log(isUserExist, "else isUserExist");
           if (isUserExist) {
-            await welcomeMenu(ctx); // Отправка сообщения меню приветствия
+            language_code && await welcomeMenu(ctx, language_code);
           } else {
-            await welcomeMessage(ctx); // Отправка приветственного сообщения
+            language_code && await welcomeMessage(ctx, language_code);
           }
           return;
         }
@@ -270,15 +294,19 @@ botAiKoshey.command("start", async (ctx: Context) => {
         );
 
         if (isUserExist) {
-          console.log("isUserExist");
-          await welcomeMenu(ctx);
+          language_code && await welcomeMenu(ctx, language_code);
         } else {
-          console.log("NotUserExist");
-          await welcomeMessage(ctx);
+          language_code && await welcomeMessage(ctx, language_code);
         }
         return;
       } catch (error) {
-        await ctx.reply(`🤔 Error: checkAndReturnUser.\n${error}`);
+        await ctx.reply(
+          `${
+            language_code === "ru"
+              ? "🤔 Ошибка: checkAndReturnUser."
+              : "🤔 Error: checkAndReturnUser."
+          }\n${error}`,
+        );
         await bugCatcherRequest(
           "ai_koshey_bot (select_izbushka && inviter)",
           error,
@@ -294,14 +322,16 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
   const inviter = ctx?.message?.text;
   const message = ctx.update.message;
   const language_code = message?.from?.language_code;
-  // Проверяем, является ли сообщение ответом (есть ли reply_to_message)
+  // Check if the message is a reply (if there is a reply_to_message)
   if (ctx?.message?.reply_to_message) {
-    // Проверяем, содержит ли текст оригинального сообщения определенный текст
+    // Check if the original message text contains a specific text
     const originalMessageText = ctx?.message?.reply_to_message?.text;
     console.log(originalMessageText, "originalMessageText");
     if (
       originalMessageText &&
       (originalMessageText.includes("🏰 Добро пожаловать") ||
+        originalMessageText.includes("🏰 Welcome") ||
+        originalMessageText.includes("🔒 Oh, my apologies!") ||
         originalMessageText.includes("🔒 Ох, увы и ах!"))
     ) {
       try {
@@ -328,29 +358,19 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             intro({ language_code }),
             {
               reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: "🔥 Огонь",
-                      callback_data: "fire",
-                    },
-                    {
-                      text: "🎺 Медные трубы",
-                      callback_data: "copper_pipes",
-                    },
-                    {
-                      text: "💧 Вода",
-                      callback_data: "water",
-                    },
-                  ],
-                ],
+                inline_keyboard: menuButton({ language_code }),
               },
             },
           );
           return;
         } else {
+          const text = `🔒 ${
+            language_code === "ru"
+              ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления."
+              : "Oh, my apologies! The word that came to me, the secret does not answer. Please, tell me another word that is the key to the right path, so that the path of your life is a strange and open way to the kingdom."
+          }`;
           await ctx.reply(
-            `🔒 Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.`,
+            text,
             {
               reply_markup: {
                 force_reply: true,
@@ -369,13 +389,12 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
   } else {
     await ctx.replyWithChatAction("typing");
     const query = ctx?.message?.text;
-    console.log(query, "query");
+
     const username = ctx?.update?.message?.from?.username;
-    console.log(username, "username");
 
     if (username) {
       const id_array = await getPassportsTasksByUsername(username);
-      console.log(id_array, "id_array");
+
       if (query) {
         const { content, tasks } = await getAiFeedbackFromSupabase({
           query,
@@ -399,9 +418,9 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
 });
 
 botAiKoshey.on("callback_query:data", async (ctx) => {
-  console.log(ctx.callbackQuery, "callback_query");
   await ctx.replyWithChatAction("typing");
-
+  const language_code = ctx?.update?.callback_query?.from?.language_code ||
+    "en";
   const callbackData = ctx.callbackQuery.data;
 
   const username = ctx.update && ctx.update.callback_query.from.username;
@@ -411,10 +430,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     rooms: RoomNode[],
     type: string,
   ) => {
-    console.log(callbackData, "callbackData");
     try {
       if (rooms && rooms.length > 0) {
-        console.log(rooms, " handleRoomSelection rooms");
         const keyboard = rooms
           .filter((room: RoomNode) => room)
           .map((room: RoomNode) => ({
@@ -434,27 +451,42 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             },
             [],
           );
-        console.log(keyboard, "keyboard");
+
         await ctx.replyWithChatAction("typing");
         if (type === "fire") {
+          const text = `🔥 ${
+            language_code === "ru"
+              ? "Пламя горячее - это личные избушки, где твои слова пишутся и задачи создаются."
+              : "Fire is a private room where your words are written and tasks are created."
+          }`;
           await ctx.reply(
-            "🔥 Пламя горячее - это личные избушки, где твои слова пишутся и задачи создаются.",
+            text,
             {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
           return;
         } else if (type === "water") {
+          const text = `💧 ${
+            language_code === "ru"
+              ? "Воды чистые к себе манят, где гость ты в избушках дорогой."
+              : "Water is pure to you, where guests are in the private rooms."
+          }`;
           await ctx.reply(
-            "💧 Воды чистые к себе манят, где гость ты в избушках дорогой.\n\nЗдесь избушки, к которым у тебя есть доступ.",
+            text,
             {
               reply_markup: { inline_keyboard: keyboard },
             },
           );
           return;
         } else if (type === "copper_pipes") {
+          const text = `🎺 ${
+            language_code === "ru"
+              ? "Медные трубы - это чародейские избушки, где обучение к мудрости тебя ведет."
+              : "Copper pipes are the sacred huts where the training to wisdom guides you."
+          }`;
           await ctx.reply(
-            "🎺 Медные трубы - это чародейские избушки, где обучение к мудрости тебя ведет.",
+            text,
             {
               reply_markup: { inline_keyboard: keyboard },
             },
@@ -463,32 +495,44 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         }
         return;
       } else {
-        await ctx.reply(`У вас нет избушек куда вас пригласили`);
+        const text = `${
+          language_code === "ru"
+            ? "У вас нет избушек куда вас пригласили"
+            : "You don't have any rooms where you were invited"
+        }`;
+        await ctx.reply(text);
         return;
       }
     } catch (error) {
-      await ctx.reply(`Ошибка при выборе избушки`, error);
-      throw new Error("Ошибка при выборе избушки");
+      const text = `${
+        language_code === "ru"
+          ? "Ошибка при выборе избушки"
+          : "Error selecting the room"
+      }`;
+      await ctx.reply(text, error);
+      throw new Error(text);
     }
   };
 
   if (callbackData === "fire") {
     const rooms = username && (await getRooms(username));
-    console.log(rooms, "rooms fire");
     rooms && await handleRoomSelection(ctx, rooms, "fire");
   } else if (callbackData === "water") {
     const rooms = username && (await getRoomsWater(username));
-    console.log(rooms, "rooms waters");
     rooms && await handleRoomSelection(ctx, rooms, "water");
   } else if (callbackData === "copper_pipes") {
     const rooms = await getRoomsCopperPipes();
-    console.log(rooms, "rooms copper_pipes");
     rooms && await handleRoomSelection(ctx, rooms, "copper_pipes");
   }
 
   if (callbackData === "name_izbushka") {
     try {
-      await ctx.reply("Как назовем избушку?", {
+      const text = `${
+        language_code === "ru"
+          ? "Как назовем избушку?"
+          : "How do we name the room?"
+      }`;
+      await ctx.reply(text, {
         reply_markup: {
           force_reply: true,
         },
@@ -506,7 +550,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     // console.log(rooms, "rooms");
     try {
       if (Array.isArray(rooms)) {
-        await ctx.reply("🏡 Выберите избушку", {
+        const text = `${
+          language_code === "ru" ? "🏡 Выберите избушку" : "Select the room"
+        }`;
+        await ctx.reply(text, {
           reply_markup: {
             inline_keyboard: rooms
               .filter((room: RoomNode) => room)
@@ -530,7 +577,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
           },
         });
       } else {
-        await ctx.reply("Ошибка: не удалось загрузить избушки.");
+        const text = `${
+          language_code === "ru"
+            ? "Ошибка: не удалось загрузить избушки."
+            : "Error: failed to load room."
+        }`;
+        await ctx.reply(text);
         await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
         throw new Error("ai_koshey_bot (show_izbushka)");
       }
@@ -549,14 +601,21 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       if (select_izbushka) {
         username && await setSelectedIzbushka(username, select_izbushka);
       }
-
+      const text = `${
+        language_code === "ru"
+          ? '📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.'
+          : 'What, traveler, to start the broadcast, press the "Izbushka" button more joyfully and laugh, because all is prepared for the start of your journey through the digital spaces! \n\n🌟 Share the following link with the person you want to meet in the hut on the curved tips of the hut.'
+      }`;
       await ctx.reply(
-        `📺 Что ж, путник дорогой, дабы трансляцию начать, нажми кнопку "Izbushka" смелее и веселись, ибо все приготовлено к началу твоего путешествия по цифровым просторам!\n\n🌟 Поделись следующей ссылкой с тем, с кем встретиться в Избушке на курьих ножках хочешь.`,
+        text,
       );
       await delay(500);
-      await ctx.reply(
-        `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`,
-      );
+      const textInvite = `${
+        language_code === "ru"
+          ? '🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.'
+          : 'Invitation to the Three-Sacred-Tower\n\nPress the link to join! \n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nAfter connecting to the bot, press the "Izbushka" button to enter the video meeting.'
+      }`;
+      await ctx.reply(textInvite);
       return;
     } catch (error) {
       await bugCatcherRequest("ai_koshey_bot (select_izbushka)", error);
