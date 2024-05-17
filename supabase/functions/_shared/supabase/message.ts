@@ -6,14 +6,19 @@ interface MessageObject {
   workspace_id: string;
   room_id: string;
   content: string;
+  ai_content: string;
+  embedding: string;
 }
 
 export const setMessage = async (messageObject: MessageObject) => {
   try {
     const { data: dataMessage, error: errorMessage } = await supabase
       .from("messages")
-      .insert(messageObject);
+      .insert(messageObject)
+      .select("*");
+
     console.log(dataMessage, "dataMessage");
+
     if (errorMessage) {
       throw new Error(`Error setMessage: ${errorMessage}`);
     }

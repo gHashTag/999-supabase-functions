@@ -21,6 +21,7 @@ import {
 import {
   checkAndReturnUser,
   checkUsernameCodes,
+  getSupabaseUser,
   setSelectedIzbushka,
 } from "../_shared/supabase/users.ts";
 import {
@@ -137,24 +138,9 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
   return menuButton;
 };
 
-// Stores data per user-chat combination.
-function getSessionKey(ctx: Context): string | undefined {
-  // Give every user their one personal session storage per chat with the bot
-  // (an independent session for each group and their private chat)
-  const user_id = ctx.from?.id;
-  console.log(user_id, "user_id");
-  const chat_id = ctx.chat?.id;
-  console.log(chat_id, "chat_id");
-  return user_id && chat_id ? `${user_id}/${chat_id}` : undefined;
-}
-
-botAiKoshey.use(session({ getSessionKey, storage: supabaseStorage }));
-
 // Обработчик команды "start"
 botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   await ctx.replyWithChatAction("typing");
-  console.log(ctx.session, "ctx.session");
-  ctx.session = ctx.session || getSessionKey(ctx);
 
   const params = ctx?.message?.text && ctx?.message?.text.split(" ")[1];
 
@@ -401,27 +387,27 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
 
     const username = ctx?.update?.message?.from?.username;
 
-    if (username) {
-      const id_array = await getPassportsTasksByUsername(username);
+    if (!username) return;
 
-      if (query) {
-        const { content, tasks } = await getAiFeedbackFromSupabase({
-          query,
-          id_array,
-        });
-        getAiFeedbackFromSupabase;
-        let tasksMessage = `📝 ${
-          language_code === "ru" ? "Задачи:\n" : "Tasks:\n"
-        }`;
-        tasks.forEach((task) => {
-          tasksMessage += `\n${task.title}\n${task.description}\n`;
-        });
+    const id_array = await getPassportsTasksByUsername(username);
+    if (query) {
+      const { content, tasks } = await getAiFeedbackFromSupabase({
+        query,
+        id_array,
+        username,
+      });
 
-        await ctx.reply(`${content}\n\n${tasksMessage}`, {
-          parse_mode: "Markdown",
-        });
-        return;
-      }
+      let tasksMessage = `📝 ${
+        language_code === "ru" ? "Задачи:\n" : "Tasks:\n"
+      }`;
+      tasks.forEach((task) => {
+        tasksMessage += `\n${task.title}\n${task.description}\n`;
+      });
+
+      await ctx.reply(`${content}\n\n${tasksMessage}`, {
+        parse_mode: "Markdown",
+      });
+      return;
     }
   }
 });

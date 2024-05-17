@@ -108,7 +108,7 @@ export const getSelectIzbushkaId = async (
       .eq("id", selectIzbushka);
 
     const izbushka = response.data ? response.data[0] : null;
-    console.log(izbushka, "izbushka");
+
     if (izbushka) {
       return {
         izbushka,

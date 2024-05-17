@@ -59,7 +59,7 @@ export async function createUser(
 
 export const getSupabaseUser = async (
   username: string,
-): Promise<SupabaseUser | null | Response> => {
+): Promise<SupabaseUser> => {
   try {
     const response = await supabase
       .from("users")
@@ -69,7 +69,7 @@ export const getSupabaseUser = async (
 
     if (response.error && response.error.code === "PGRST116") {
       console.error("getSupabaseUser: User not found");
-      return null;
+      throw new Error("User not found");
     }
 
     if (response.error) {
@@ -77,7 +77,7 @@ export const getSupabaseUser = async (
         "Error getting user information:",
         response.error,
       );
-      return null;
+      throw new Error("Error getting user information");
     }
 
     return response.data;

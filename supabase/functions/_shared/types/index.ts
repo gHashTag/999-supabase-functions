@@ -21,6 +21,7 @@ export type SupabaseUser = TUser & {
   admin_email?: string | null;
   role?: string | null;
   display_name?: string | null;
+  select_izbushka?: string | null;
 };
 
 export interface UserContext {
@@ -306,6 +307,7 @@ export interface Filter {
 export interface getAiSupabaseFeedbackT {
   query: string;
   id_array: string[];
+  username: string;
 }
 
 export type AiRole = "system" | "user" | "assistant";

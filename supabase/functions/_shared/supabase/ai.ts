@@ -19,7 +19,7 @@ export const getCompletion = async (prompt: string) => {
     const response = await openai.chat.completions.create({
       model: model_ai,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0,
+      temperature: 0.6,
     });
 
     return {
@@ -62,11 +62,19 @@ interface Task {
 }
 
 export async function getAiFeedbackFromSupabase(
-  { query, id_array }: getAiSupabaseFeedbackT,
+  {
+    query,
+    id_array,
+    username,
+  }: getAiSupabaseFeedbackT,
 ): Promise<{ content: string; tasks: Task[]; data: any }> {
   try {
     const { data } = await supabase.functions.invoke("ask-data", {
-      body: JSON.stringify({ query, id_array }),
+      body: JSON.stringify({
+        query,
+        id_array,
+        username,
+      }),
     });
 
     console.log(data, "data");

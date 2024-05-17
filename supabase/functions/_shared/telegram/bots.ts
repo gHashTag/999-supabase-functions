@@ -1,9 +1,6 @@
 import {
   Bot,
   Context,
-  GrammyError,
-  HttpError,
-  session,
   SessionFlavor,
   webhookCallback,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
@@ -80,7 +77,6 @@ export const logBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN_LOG");
 export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
 
 const token = DEV ? tokenTest : tokenProd;
-console.log(token, "token");
 
 interface SessionData {
   id?: string;
@@ -97,7 +93,6 @@ interface Message {
 
 export const botAiKoshey = new Bot<AiKosheyContext>(token || "");
 
-console.log(logBotToken, "logBotToken");
 export const logBot = new Bot(logBotToken || "");
 export const bugCatcherDevBot = new Bot(bugCatcherDevBotToken || "");
 export const babaYagaChatId = Deno.env.get("AI_BABA_YAGA_CHAT_ID");

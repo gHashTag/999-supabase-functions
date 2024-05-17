@@ -12,8 +12,10 @@ import {
 import { corsHeaders } from "../_shared/handleCORS.ts";
 
 import { setMessage } from "../_shared/supabase/message.ts";
+import { getSupabaseUser } from "../_shared/supabase/users.ts";
+import { getSelectIzbushkaId } from "../_shared/supabase/rooms.ts";
 
-serve(async (req: Request) => {
+serve(async (req: Request): Promise<Response> => {
   // ask-custom-data logic
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -23,12 +25,7 @@ serve(async (req: Request) => {
   const {
     query,
     id_array,
-    user_id,
     username,
-    first_name,
-    last_name,
-    workspace_id,
-    room_id,
   } = await req.json();
 
   const embeddingUser = await embeddingResponse(query);
@@ -99,18 +96,34 @@ serve(async (req: Request) => {
   const { id, ai_content } = await getCompletion(prompt);
 
   if (ai_content) {
+    const dataUser = await getSupabaseUser(username);
+    console.log(dataUser, "dataUser");
+    if (!dataUser || !dataUser.select_izbushka) {
+      throw new Response("User not found", { status: 400 });
+    }
+
+    const { izbushka } = await getSelectIzbushkaId(dataUser.select_izbushka);
+
     const commonPrompt =
-      `User ${first_name} ${last_name}: ${query}\n\nassistant: ${ai_content}`;
+      `User ${dataUser.first_name} ${dataUser.last_name}: ${query}\n\nAssistant: ${ai_content}`;
+
     const embedding = await embeddingResponse(commonPrompt);
 
+    if (
+      !izbushka || !dataUser.user_id || !dataUser.username ||
+      !izbushka.workspace_id || !izbushka.room_id || !embedding
+    ) {
+      throw new Response("Izbushka not found", { status: 400 });
+    }
+
     const messageObject = {
-      user_id,
-      username,
-      workspace_id,
-      room_id,
+      user_id: dataUser?.user_id,
+      username: dataUser?.username,
+      workspace_id: izbushka?.workspace_id,
+      room_id: izbushka?.room_id,
       content: input,
       ai_content,
-      embedding,
+      embedding: JSON.stringify(embedding),
     };
 
     const dataMessage = await setMessage(messageObject);
@@ -140,6 +153,49 @@ serve(async (req: Request) => {
 //   where t.id = any(id_array)
 //   and t.embedding <#> embedding_vector < -match_threshold
 //   order by t.embedding <#> embedding_vector;
+// end;
+// $$;
+
+// -- alter table public.messages
+// -- add column embedding vector (384);
+
+// -- create index if not exists messages_embedding_idx on public.messages using hnsw (embedding vector_ip_ops) tablespace pg_default;
+
+// create or replace function match_messages (
+//   embedding_vector vector(384),
+//   match_threshold float,
+//   match_count int
+// )
+// returns table (
+//   id bigint,
+//   title text,
+//   description text,
+//   content text,
+//   url text,
+//   brand text,
+//   similarity float
+// )
+// language plpgsql
+// as $$
+// begin
+//   return query
+//   select
+//     messages.id,
+//     messages.user_id,
+//     messages.username,
+//     messages.first_name,
+//     messages.last_name,
+//     messages.workspace_id,
+//     messages.room_id,
+//     messages.description,
+//     messages.content,
+//     messages.ai_content,
+//     messages.created_at,
+//     1 - (messages.embedding <=> embedding_vector) as similarity
+//   from messages
+//   where 1 - (messages.embedding <=> embedding_vector) > match_threshold
+//   order by similarity desc
+//   limit match_count;
 // end;
 // $$;
 
