@@ -4,8 +4,14 @@ import "https://deno.land/x/xhr@0.2.1/mod.ts";
 import { oneLine, stripIndent } from "https://esm.sh/common-tags@1.8.2";
 import { supabase } from "../_shared/supabase/index.ts";
 
-import { getCompletion, model, tokenizer } from "../_shared/supabase/ai.ts";
+import {
+  embeddingResponse,
+  getCompletion,
+  tokenizer,
+} from "../_shared/supabase/ai.ts";
 import { corsHeaders } from "../_shared/handleCORS.ts";
+
+import { setMessage } from "../_shared/supabase/message.ts";
 
 serve(async (req: Request) => {
   // ask-custom-data logic
@@ -14,22 +20,30 @@ serve(async (req: Request) => {
   }
 
   // Search query is passed in request payload
-  const { query, id_array } = await req.json();
+  const {
+    query,
+    id_array,
+    user_id,
+    username,
+    first_name,
+    last_name,
+    workspace_id,
+    room_id,
+  } = await req.json();
+
+  const embeddingUser = await embeddingResponse(query);
 
   // OpenAI recommends replacing newlines with spaces for best results
   const input = query.replace(/\n/g, " ");
   console.log(input, "input");
   // Generate a one-time embedding for the query itself
-  const embeddingResponse = await model.run(input, {
-    mean_pool: true,
-    normalize: true,
-  });
+
   console.log(id_array, "id_array");
   // Query embeddings.
   const { data: tasks, error: tasksError } = await supabase
     .rpc("query_embeddings_tasks_with_ids", {
       id_array,
-      embedding_vector: JSON.stringify(embeddingResponse),
+      embedding_vector: JSON.stringify(embeddingUser),
       match_threshold: 0.4,
     })
     .select("id,user_id,title,description,created_at,updated_at")
@@ -72,7 +86,7 @@ serve(async (req: Request) => {
   }
 
   const prompt = stripIndent`${oneLine`
-  You are the head of the dao 999 nft digital avatar bank, which is very helpful when it comes to talking about the tasks of its inhabitants! Always answer honestly and be as helpful as you can! Your name is Ai Koshey with the main task of helping users solve their problems."`}
+  You are the head of the dao 999 nft digital avatar bank, which is very helpful when it comes to talking about the tasks of its inhabitants! Always answer honestly and be as helpful as you can! If there is no task, then return an empty array.`}
     Context sections:
     ${contextText}
     Question: """
@@ -82,10 +96,33 @@ serve(async (req: Request) => {
   `;
   console.log(prompt, "prompt");
   // get response from gpt-4o model
-  const { id, content } = await getCompletion(prompt);
+  const { id, ai_content } = await getCompletion(prompt);
 
-  // return the response from the model to our use through a Response
-  return new Response(JSON.stringify({ id, content, tasks }), {
+  if (ai_content) {
+    const commonPrompt =
+      `User ${first_name} ${last_name}: ${query}\n\nassistant: ${ai_content}`;
+    const embedding = await embeddingResponse(commonPrompt);
+
+    const messageObject = {
+      user_id,
+      username,
+      workspace_id,
+      room_id,
+      content: input,
+      ai_content,
+      embedding,
+    };
+
+    const dataMessage = await setMessage(messageObject);
+
+    console.log(dataMessage, "dataMessage");
+
+    // return the response from the model to our use through a Response
+    return new Response(JSON.stringify({ id, ai_content, tasks }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  return new Response("No content", {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });

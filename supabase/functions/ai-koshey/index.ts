@@ -5,11 +5,14 @@ import {
   Context,
   GrammyError,
   HttpError,
+  session,
+  SessionFlavor,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
 import { delay } from "../_shared/constants.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import {
+  AiKosheyContext,
   botAiKoshey,
   botUsername,
   bugCatcherRequest,
@@ -33,6 +36,7 @@ import {
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
+import { supabaseStorage } from "../_shared/supabase/index.ts";
 
 export type CreateUserT = {
   id: number;
@@ -133,9 +137,24 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
   return menuButton;
 };
 
+// Stores data per user-chat combination.
+function getSessionKey(ctx: Context): string | undefined {
+  // Give every user their one personal session storage per chat with the bot
+  // (an independent session for each group and their private chat)
+  const user_id = ctx.from?.id;
+  console.log(user_id, "user_id");
+  const chat_id = ctx.chat?.id;
+  console.log(chat_id, "chat_id");
+  return user_id && chat_id ? `${user_id}/${chat_id}` : undefined;
+}
+
+botAiKoshey.use(session({ getSessionKey, storage: supabaseStorage }));
+
 // Обработчик команды "start"
-botAiKoshey.command("start", async (ctx: Context) => {
+botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   await ctx.replyWithChatAction("typing");
+  console.log(ctx.session, "ctx.session");
+  ctx.session = ctx.session || getSessionKey(ctx);
 
   const params = ctx?.message?.text && ctx?.message?.text.split(" ")[1];
 
@@ -602,8 +621,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       await delay(500);
       const textInvite = `${
         language_code === "ru"
-          ? '🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.'
-          : 'Invitation to the Three-Sacred-Tower\n\nPress the link to join! \n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nAfter connecting to the bot, press the "Izbushka" button to enter the video meeting.'
+          ? `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`
+          : `Invitation to the Three-Sacred-Tower\n\nPress the link to join! \n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nAfter connecting to the bot, press the "Izbushka" button to enter the video meeting.`
       }`;
       await ctx.reply(textInvite);
       return;

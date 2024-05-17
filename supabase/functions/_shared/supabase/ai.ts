@@ -8,6 +8,12 @@ export const tokenizer = new GPT3Tokenizer({ type: "gpt3" });
 
 export const model = new Supabase.ai.Session("gte-small");
 
+export const embeddingResponse = async (input: string) =>
+  await model.run(input, {
+    mean_pool: true,
+    normalize: true,
+  });
+
 export const getCompletion = async (prompt: string) => {
   try {
     const response = await openai.chat.completions.create({
@@ -18,7 +24,7 @@ export const getCompletion = async (prompt: string) => {
 
     return {
       id: response.id,
-      content: response.choices[0].message.content,
+      ai_content: response.choices[0].message.content,
       error: null,
     };
   } catch (error) {

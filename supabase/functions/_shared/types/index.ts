@@ -307,3 +307,5 @@ export interface getAiSupabaseFeedbackT {
   query: string;
   id_array: string[];
 }
+
+export type AiRole = "system" | "user" | "assistant";

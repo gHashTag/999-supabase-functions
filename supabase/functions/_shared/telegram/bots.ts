@@ -1,32 +1,36 @@
 import {
   Bot,
   Context,
+  GrammyError,
+  HttpError,
+  session,
+  SessionFlavor,
   webhookCallback,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
-import {
-  I18n,
-  I18nFlavor,
-} from "https://deno.land/x/grammy_i18n@v1.0.2/mod.ts";
-import { DEV } from "../constants.ts";
 
-// Bot Context
-type MyContext = Context & I18nFlavor;
+// import {
+//   I18n,
+//   I18nFlavor,
+// } from "https://deno.land/x/grammy_i18n@v1.0.2/mod.ts";
+import { DEV } from "../constants.ts";
 
 // // Bot Init
 // export const botAiKoshey = new Bot<MyContext>(
 //   Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY") || "",
 // );
 
-export const javaScriptDevBot = new Bot<MyContext>(
+export type AiKosheyContext = Context & SessionFlavor<SessionData>;
+
+export const javaScriptDevBot = new Bot<Context>(
   Deno.env.get("TELEGRAM_BOT_JAVASCRIPT_DEV_TOKEN") || "",
 );
-export const typeScriptDevBot = new Bot<MyContext>(
+export const typeScriptDevBot = new Bot<Context>(
   Deno.env.get("TELEGRAM_BOT_TYPESCRIPT_DEV_TOKEN") || "",
 );
-export const reactNativeDevBot = new Bot<MyContext>(
+export const reactNativeDevBot = new Bot<Context>(
   Deno.env.get("TELEGRAM_BOT_REACT_DEV_TOKEN") || "",
 );
-export const pythonDevBot = new Bot<MyContext>(
+export const pythonDevBot = new Bot<Context>(
   Deno.env.get("TELEGRA_BOT_PYTHON_DEV_TOKEN") || "",
 );
 
@@ -78,7 +82,21 @@ export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
 const token = DEV ? tokenTest : tokenProd;
 console.log(token, "token");
 
-export const botAiKoshey = new Bot(token || "");
+interface SessionData {
+  id?: string;
+  session?: string;
+}
+
+interface Message {
+  id?: number;
+  role: string;
+  content: string;
+  user_id: string;
+  session_id: string;
+}
+
+export const botAiKoshey = new Bot<AiKosheyContext>(token || "");
+
 console.log(logBotToken, "logBotToken");
 export const logBot = new Bot(logBotToken || "");
 export const bugCatcherDevBot = new Bot(bugCatcherDevBotToken || "");
