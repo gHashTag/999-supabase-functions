@@ -18,7 +18,7 @@ import {
 import { getRoomById } from "../_shared/supabase/rooms.ts";
 import { PassportUser, TranscriptionAsset } from "../_shared/types/index.ts";
 import { createTask, updateTaskByPassport } from "../_shared/supabase/tasks.ts";
-import { setRoomAsset } from "../_shared/supabase/room_assets.ts";
+import { getRoomAsset, setRoomAsset } from "../_shared/supabase/room_assets.ts";
 
 import { getWorkspaceById } from "../_shared/supabase/workspaces.ts";
 import { corsHeaders, headers } from "../_shared/handleCORS.ts";
@@ -59,10 +59,12 @@ async function sendTasksToTelegram({
   if (passports && passports.length > 0) {
     const bot = new Bot(token);
     for (const passport of passports) {
-      await bot.api.sendMessage(
-        passport.chat_id,
-        `${translated_text}\n${assignee}`,
-      );
+      if (passport?.chat_id) {
+        await bot.api.sendMessage(
+          passport.chat_id,
+          `${translated_text}\n${assignee}`,
+        );
+      }
     }
   }
 }
@@ -104,51 +106,32 @@ Deno.serve(async (req: Request) => {
   console.log(type, "type");
 
   try {
-    const supabaseClient = client();
-
-    if (type === undefined) {
-      return new Response(
-        JSON.stringify({
-          message: "type is undefined",
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders },
-        },
-      );
-    }
-
     if (type === "transcription.success") {
-      console.log(data, "data transcription.success");
-      if (!data.room_id) {
-        return new Response(
-          JSON.stringify({
-            message: `check init data ${JSON.stringify(data)}`,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders },
-          },
-        );
-      } else {
-        // Получаем прямую ссылку на текстовый файл транскрипции
+      // await supportRequest("transcription.success", data);
+
+      const recording_id = data.recording_id;
+      if (!recording_id) throw new Error("recording_id is null");
+
+      const { isExistRoomAsset } = await getRoomAsset(recording_id);
+      console.log(isExistRoomAsset, "isExistRoomAsset");
+      if (!isExistRoomAsset) {
         const transcriptTextPresignedUrl = data.transcript_txt_presigned_url;
+        console.log(transcriptTextPresignedUrl, "transcriptTextPresignedUrl");
 
-        await supportRequest("transcription.success", data);
-
-        // Выполняем запрос к URL для получения текста транскрипции
         const transcriptResponse = await fetch(transcriptTextPresignedUrl);
 
         const transcription = await transcriptResponse.text();
 
         const summaryJsonPresignedUrl = data.summary_json_presigned_url;
+        console.log(summaryJsonPresignedUrl, "summaryJsonPresignedUrl");
 
         const summaryJSONResponse = await fetch(summaryJsonPresignedUrl);
         if (!summaryJSONResponse.ok) {
-          throw new Error("Не удалось получить transcriptJSONResponse");
+          throw new Error("summaryJSONResponse is not ok");
         }
+
         const summaryResponse = await summaryJSONResponse.json();
-        console.log(summaryResponse, "summaryResponse");
+
         const summarySection = summaryResponse.sections.find(
           (section: {
             title: string;
@@ -157,7 +140,7 @@ Deno.serve(async (req: Request) => {
             paragraph: string;
           }) => section.title === "Short Summary",
         );
-        console.log(summarySection, "summarySection");
+
         const summary_short = summarySection ? summarySection.paragraph : "";
 
         const titleWithEmoji = await createEmoji(
@@ -172,6 +155,7 @@ Deno.serve(async (req: Request) => {
           workspace_id: data.workspace_id,
           user_id: data.user_id,
         };
+
         await setRoomAsset(roomAsset);
 
         const systemPrompt =
@@ -181,194 +165,186 @@ Deno.serve(async (req: Request) => {
           transcription,
           systemPrompt,
         );
-        console.log(preparedTasks, "preparedTasks");
+        if (!preparedTasks) throw new Error("preparedTasks is null");
 
-        const { data: users } = await supabaseClient.from("user_passport")
-          .select("*").eq("room_id", data.room_id).eq("type", "room");
+        if (!data.room_id) throw new Error("room_id is null");
+        const users = await getPassportByRoomId(data.room_id);
 
-        console.log(users, "user_passport");
-        if (users) {
-          const preparedUsers = getPreparedUsers(users);
-          console.log(preparedUsers, "preparedUsers");
+        if (!users) throw new Error("users is null");
 
-          const prompt = `add the 'user_id' from of ${
-            JSON.stringify(
-              preparedUsers,
-            )
-          } to the objects of the ${
-            JSON.stringify(
-              preparedTasks,
-            )
-          } array. (Example: [{
-            user_id: "1a1e4c75-830c-4fe8-a312-c901c8aa144b",
-            first_name: "Andrey",
-            last_name: "O",
-            username: "reactotron",
-            photo_url: "https://avatars.githubusercontent.com/u/10137008?v=4",
-            chat_id: 123456789,
-            title: "🌌 Capture Universe",
-            description: "Capture the Universe and a couple of stars in the Aldebaran constellation"
-        }]) Provide your response as a JSON object and always response on English`;
+        const preparedUsers = getPreparedUsers(users);
+        if (!preparedUsers) throw new Error("preparedUsers is null");
 
-          // console.log(preparedTasks, "preparedTasks");
-          const tasks = await createChatCompletionJson(prompt);
-          const tasksArray = tasks && JSON.parse(tasks).tasks;
-          console.log(tasksArray, "tasksArray");
+        const prompt = `add the 'user_id' from of ${
+          JSON.stringify(
+            preparedUsers,
+          )
+        } to the objects of the ${
+          JSON.stringify(
+            preparedTasks,
+          )
+        } array. (Example: [{
+              user_id: "1a1e4c75-830c-4fe8-a312-c901c8aa144b",
+              first_name: "Andrey",
+              last_name: "O",
+              username: "reactotron",
+              photo_url: "https://avatars.githubusercontent.com/u/10137008?v=4",
+              chat_id: 123456789,
+              title: "🌌 Capture Universe",
+              description: "Capture the Universe and a couple of stars in the Aldebaran constellation"
+          }]) Provide your response as a JSON object and always response on English`;
 
-          if (Array.isArray(tasksArray)) {
-            const newTasks = tasksArray.map((task: Task) => {
-              // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
-              if (!task.user_id) {
-                task.user_id = "28772cec-eba4-4375-a5a1-090bba2909fa";
-              }
-              return task;
-            });
-            const roomData = await getRoomById(data.room_id);
-            console.log(roomData, "roomData");
-            const { language_code, id, token, description } = roomData;
+        // console.log(preparedTasks, "preparedTasks");
+        const tasks = await createChatCompletionJson(prompt);
+        const tasksArray = tasks && JSON.parse(tasks).tasks;
 
-            const workspace_id = description;
-            console.log(workspace_id, "workspace_id");
+        if (!Array.isArray(tasksArray)) {
+          throw new Error("tasksArray is not array");
+        }
 
-            const workspace = await getWorkspaceById(workspace_id);
-
-            let workspace_name;
-            if (workspace) {
-              workspace_name = workspace[0].title;
-            } else {
-              // Обработка случая, когда объект равен null или пустой
-              return new Response( // строка 217
-                JSON.stringify({ message: "workspace_name is null" }),
-                { status: 200, headers: { ...corsHeaders } },
-              );
-            }
-            console.log(workspace_name, "workspace_name");
-            const { room_id, recording_id } = data;
-            let translated_short = summary_short;
-            if (room_id) {
-              console.log(translated_short, "translated_short");
-
-              if (language_code !== "en") {
-                translated_short = await translateText(
-                  summary_short,
-                  language_code,
-                );
-              }
-            }
-            console.log(language_code, "language_code");
-            const translatedTasks = language_code !== "en"
-              ? await Promise.all(newTasks.map(async (task) => {
-                const translated_text = await translateText(
-                  `${task.title}\n${task.description}`,
-                  language_code,
-                );
-                console.log(translated_text, "translated_text");
-                return {
-                  ...task,
-                  translated_text,
-                };
-              }))
-              : newTasks.map((task) => ({
-                ...task,
-                translated_text: `${task.title}\n${task.description}`,
-              }));
-            console.log(translatedTasks, "translatedTasks");
-            const passports = await getPassportByRoomId(room_id);
-            for (const passport of passports) {
-              const summary_short_url =
-                `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;
-
-              console.log(summary_short_url, "summary_short_url");
-              const bot = new Bot(token);
-              await bot.api.sendMessage(
-                passport.chat_id,
-                `🚀 ${translated_short}`,
-                {
-                  reply_markup: {
-                    inline_keyboard: [
-                      [
-                        {
-                          text: language_code === "ru"
-                            ? "Открыть встречу"
-                            : "Open meet",
-                          url: summary_short_url,
-                        },
-                      ],
-                    ],
-                  },
-                },
-              );
-            }
-            if (workspace_name) {
-              for (const task of translatedTasks) {
-                // Убедитесь, что userId существует и не равен null
-                const user_id = task?.user_id;
-                console.log(data.room_id, "data.room_id");
-                const taskData = await createTask({
-                  user_id,
-                  room_id: data.room_id,
-                  workspace_id,
-                  recording_id: data.recording_id,
-                  title: task.title,
-                  description: task.description,
-                  workspace_name,
-                  chat_id: roomData.chat_id,
-                  translated_text: task.translated_text,
-                });
-                console.log(taskData, "taskData");
-                const result = await createPassport({
-                  type: "task",
-                  select_izbushka: id,
-                  first_name: task.first_name,
-                  last_name: task.last_name,
-                  username: task.username,
-                  user_id: task.user_id,
-                  is_owner: true,
-                  task_id: taskData.id,
-                  recording_id,
-                });
-                console.log(result, "result");
-                if (result.passport_id) {
-                  const updateTaskData = await updateTaskByPassport({
-                    id: taskData.id,
-                    passport_id: result.passport_id,
-                  });
-                  console.log(updateTaskData, "updateTaskData");
-
-                  await sendTasksToTelegram({
-                    username: task.username,
-                    first_name: task.first_name,
-                    last_name: task.last_name,
-                    translated_text: task.translated_text,
-                    token,
-                    room_id: data.room_id,
-                    passports,
-                  }).catch(console.error);
-                }
-              }
-            }
-          } else {
-            return new Response(
-              JSON.stringify({
-                message: "workspace_name is null",
-              }),
-              {
-                status: 200,
-                headers: { ...corsHeaders },
-              },
-            );
+        const newTasks = tasksArray.map((task: Task) => {
+          // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
+          if (!task.user_id) {
+            task.user_id = "28772cec-eba4-4375-a5a1-090bba2909fa";
           }
+          return task;
+        });
 
-          return new Response(
-            JSON.stringify({
-              message: "Event processed successfully",
-            }),
+        const { roomData, isExistRoom } = await getRoomById(
+          data?.room_id,
+        );
+
+        if (!isExistRoom || !roomData) throw new Error("Room not found");
+
+        const { language_code, id, token, description } = roomData;
+
+        const workspace_id = description;
+        if (!id) throw new Error("id is null");
+        if (!workspace_id) throw new Error("workspace_id is null");
+        if (!token) throw new Error("token is null");
+
+        const workspace = await getWorkspaceById(workspace_id);
+
+        let workspace_name;
+        if (workspace) {
+          workspace_name = workspace[0].title;
+        }
+        console.log(workspace_name, "workspace_name");
+        if (!workspace_name) throw new Error("workspace_name is null");
+
+        const { room_id, recording_id } = data;
+        if (!room_id) throw new Error("room_id is null");
+        if (!recording_id) throw new Error("recording_id is null");
+        let translated_short = summary_short;
+
+        if (language_code !== "en") {
+          translated_short = await translateText(
+            summary_short,
+            language_code,
+          );
+        }
+
+        const translatedTasks = language_code !== "en"
+          ? await Promise.all(newTasks.map(async (task) => {
+            const translated_text = await translateText(
+              `${task.title}\n${task.description}`,
+              language_code,
+            );
+
+            return {
+              ...task,
+              translated_text,
+            };
+          }))
+          : newTasks.map((task) => ({
+            ...task,
+            translated_text: `${task.title}\n${task.description}`,
+          }));
+
+        const passports = await getPassportByRoomId(room_id);
+        console.log(passports, "passports");
+        if (!passports) throw new Error("passports is null");
+
+        for (const passport of passports) {
+          const summary_short_url =
+            `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;
+
+          const bot = new Bot(token);
+          await bot.api.sendMessage(
+            passport.chat_id,
+            `🚀 ${translated_short}`,
             {
-              status: 200,
-              headers: { ...corsHeaders },
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: language_code === "ru"
+                        ? "Открыть встречу"
+                        : "Open meet",
+                      url: summary_short_url,
+                    },
+                  ],
+                ],
+              },
             },
           );
         }
+
+        for (const task of translatedTasks) {
+          // Убедитесь, что userId существует и не равен null
+          const user_id = task?.user_id;
+          console.log(data.room_id, "data.room_id");
+          const taskData = await createTask({
+            user_id,
+            room_id: data.room_id,
+            workspace_id,
+            recording_id: data.recording_id,
+            title: task.title,
+            description: task.description,
+            workspace_name,
+            chat_id: roomData.chat_id,
+            translated_text: task.translated_text,
+          });
+          console.log(taskData, "taskData");
+          const result = await createPassport({
+            type: "task",
+            select_izbushka: id,
+            first_name: task.first_name,
+            last_name: task.last_name,
+            username: task.username,
+            user_id: task.user_id,
+            is_owner: true,
+            task_id: taskData.id,
+            recording_id,
+          });
+          console.log(result, "result");
+          if (!result.passport_id) throw new Error("passport_id is null");
+
+          const updateTaskData = await updateTaskByPassport({
+            id: taskData.id,
+            passport_id: result.passport_id,
+          });
+          console.log(updateTaskData, "updateTaskData");
+
+          await sendTasksToTelegram({
+            username: task.username,
+            first_name: task.first_name,
+            last_name: task.last_name,
+            translated_text: task.translated_text,
+            token,
+            room_id: data.room_id,
+            passports,
+          }).catch(console.error);
+        }
+        return new Response(
+          JSON.stringify({
+            message: "Event processed successfully",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders },
+          },
+        );
       }
     } else {
       return new Response(
@@ -391,7 +367,7 @@ Deno.serve(async (req: Request) => {
       },
     );
   }
-  return new Response("Endpoint not found", { status: 404 });
+  //return new Response("Endpoint not found", { status: 404 });
 });
 
 // const transcriptionText =

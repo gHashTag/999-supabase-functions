@@ -15,13 +15,14 @@ export const setMessage = async (messageObject: MessageObject) => {
     const { data: dataMessage, error: errorMessage } = await supabase
       .from("messages")
       .insert(messageObject)
-      .select("*");
-
-    console.log(dataMessage, "dataMessage");
+      .select(
+        "id, user_id, workspace_id, room_id, created_at, content, ai_content",
+      );
 
     if (errorMessage) {
       throw new Error(`Error setMessage: ${errorMessage}`);
     }
+    console.log(dataMessage, "dataMessage");
     return dataMessage;
   } catch (error) {
     console.log(error, "error");

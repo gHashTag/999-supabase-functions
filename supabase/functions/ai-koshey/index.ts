@@ -37,7 +37,7 @@ import {
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
-import { supabaseStorage } from "../_shared/supabase/index.ts";
+import C from "https://esm.sh/v135/bufferutil@4.0.8/denonext/bufferutil.mjs";
 
 export type CreateUserT = {
   id: number;
@@ -335,6 +335,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         );
 
         if (isInviterExist) {
+          console.log(message, "message");
           const user = {
             id: message?.from?.id,
             username: message?.from?.username,
@@ -347,6 +348,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             invitation_codes: "",
             telegram_id: message?.from?.id,
           };
+          console.log(user, "user");
           const newUser = await createUser(user);
           await ctx.replyWithChatAction("typing");
           newUser && await ctx.reply(
@@ -387,14 +389,16 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
 
     const username = ctx?.update?.message?.from?.username;
 
-    if (!username) return;
+    if (!username || !language_code) return;
 
     const id_array = await getPassportsTasksByUsername(username);
-    if (query) {
-      const { content, tasks } = await getAiFeedbackFromSupabase({
+
+    if (query && id_array && id_array.length > 0) {
+      const { ai_content, tasks } = await getAiFeedbackFromSupabase({
         query,
         id_array,
         username,
+        language_code,
       });
 
       let tasksMessage = `📝 ${
@@ -404,9 +408,17 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         tasksMessage += `\n${task.title}\n${task.description}\n`;
       });
 
-      await ctx.reply(`${content}\n\n${tasksMessage}`, {
+      await ctx.reply(`${ai_content}\n\n${tasksMessage}`, {
         parse_mode: "Markdown",
       });
+      return;
+    } else {
+      const textError = `${
+        language_code === "ru"
+          ? "🤔 Ошибка: не удалось загрузить задачи."
+          : "🤔 Error: failed to load tasks."
+      }`;
+      await ctx.reply(textError);
       return;
     }
   }

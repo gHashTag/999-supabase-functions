@@ -119,7 +119,7 @@ export const supportRequest = async (title: string, data: any) => {
       );
     }
   } catch (error) {
-    console.log(error, "supportRequest error");
+    throw new Error(`Error supportRequest: ${JSON.stringify(error)}`);
   }
 };
 

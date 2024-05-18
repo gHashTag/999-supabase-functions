@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
   const payload: WebhookPayload = await req.json();
   const { content, id } = payload?.record;
 
-  console.log(payload, "payload")
   // Check if content has changed.
   if (content === payload?.old_record?.content) {
     return new Response("ok - no change");
@@ -42,9 +41,8 @@ Deno.serve(async (req) => {
   }).eq(
     "id",
     id,
-  ).select("*")
+  ).select("*");
   if (error) console.log(error.message, "ERROR MESSAGE(46)");
-  console.log(data, "data")
 
   return new Response("ok - updated");
 });

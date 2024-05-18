@@ -8,7 +8,7 @@ interface CreateTask {
   title: string;
   description: string;
   workspace_name: string;
-  chat_id: string;
+  chat_id: number;
   translated_text: string;
 }
 

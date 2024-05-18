@@ -28,7 +28,7 @@ export async function setPassport(
 
 interface CreatePassport {
   type: "room" | "task" | "workspace";
-  select_izbushka: string;
+  select_izbushka: number;
   first_name: string;
   last_name: string;
   username: string;
@@ -173,7 +173,7 @@ export async function getPassportsTasksByUsername(
         "Error getPassportsTasksByUsername: " + JSON.stringify(error),
       );
     }
-    console.log(data, "data");
+
     return data.map((item) => item.task_id);
   } catch (error) {
     throw new Error("Error getPassportsTasksByUsername: " + error);

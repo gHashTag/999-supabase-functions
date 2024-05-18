@@ -16,11 +16,44 @@ export const setRoomAsset = async (
     }
 
     if (errorInsertRoomAsset) {
-      throw new Error("Error getRoomById: " + errorInsertRoomAsset);
+      throw new Error("Error setRoomAsset: " + errorInsertRoomAsset);
     }
 
     return roomAssetData;
   } catch (error) {
-    throw new Error("Error getRoomById: " + error);
+    throw new Error("Error setRoomAsset: " + error);
+  }
+};
+
+export const getRoomAsset = async (
+  recording_id: string,
+): Promise<{
+  roomAssetData: TranscriptionAsset[];
+  isExistRoomAsset: boolean;
+}> => {
+  try {
+    const { data: roomAssetData, error: errorGetRoomAsset } = await supabase
+      .from("room_assets")
+      .select("*")
+      .eq("recording_id", recording_id)
+      .single();
+    console.log(roomAssetData, "roomAssetData");
+    if (errorGetRoomAsset) {
+      if (errorGetRoomAsset.code === "PGRST116") {
+        return {
+          roomAssetData: [],
+          isExistRoomAsset: false,
+        };
+      }
+      throw new Error(
+        "Error getRoomAsset: " + JSON.stringify(errorGetRoomAsset),
+      );
+    }
+    return {
+      roomAssetData: roomAssetData === null ? [] : roomAssetData,
+      isExistRoomAsset: roomAssetData === null ? false : true,
+    };
+  } catch (error) {
+    throw new Error("Error getRoomAsset: " + error);
   }
 };

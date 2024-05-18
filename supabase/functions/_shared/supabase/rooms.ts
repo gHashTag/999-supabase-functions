@@ -7,25 +7,36 @@ import {
 
 export const getRoomById = async (
   room_id: string,
-) => {
+): Promise<{
+  roomData?: RoomNode;
+  isExistRoom: boolean;
+}> => {
+  console.log(room_id, "room_id");
   try {
     const { data: roomData, error: roomError } = await supabase
       .from("rooms")
       .select("*")
-      .eq("room_id", room_id);
+      .eq("room_id", room_id)
+      .single();
 
     if (roomError) {
-      throw new Error("Error getRoomById: " + roomError);
+      throw new Error("Error getRoomById: " + roomError.message);
     }
 
-    if (!roomData || roomData.length === 0) {
+    if (!roomData) {
       console.log("Room not found");
-      return [];
+      return {
+        isExistRoom: false,
+      };
     }
-
-    return roomData[0];
+    console.log(roomData, "roomData");
+    return {
+      roomData,
+      isExistRoom: true,
+    };
   } catch (error) {
-    throw new Error("Error getRoomById: " + error);
+    console.error("Error getRoomById:", error);
+    throw new Error("Error getRoomById: " + error.message);
   }
 };
 

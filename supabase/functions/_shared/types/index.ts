@@ -22,6 +22,8 @@ export type SupabaseUser = TUser & {
   role?: string | null;
   display_name?: string | null;
   select_izbushka?: string | null;
+  position?: string | null;
+  designation?: string | null;
 };
 
 export interface UserContext {
@@ -308,6 +310,7 @@ export interface getAiSupabaseFeedbackT {
   query: string;
   id_array: string[];
   username: string;
+  language_code: string;
 }
 
 export type AiRole = "system" | "user" | "assistant";

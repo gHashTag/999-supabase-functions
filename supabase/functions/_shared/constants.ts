@@ -26,6 +26,21 @@ export const SITE_URL = DEV
 
 export const PRODUCTION_URL = Deno.env.get("PRODUCTION_URL");
 
+export const SUPABASE_ANON_KEY = DEV
+  ? Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+  : Deno.env.get("SUPABASE_ANON_KEY");
+
+export const NEXT_PUBLIC_SUPABASE_URL = Deno.env.get(
+  "NEXT_PUBLIC_SUPABASE_URL",
+);
+export const NEXT_PUBLIC_SUPABASE_ANON_KEY = Deno.env.get(
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+);
+
+export const SUPABASE_URL = DEV
+  ? Deno.env.get("NEXT_PUBLIC_SUPABASE_URL")
+  : Deno.env.get("SUPABASE_URL");
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
