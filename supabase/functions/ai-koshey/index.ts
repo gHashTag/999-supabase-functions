@@ -5,8 +5,6 @@ import {
   Context,
   GrammyError,
   HttpError,
-  session,
-  SessionFlavor,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
 import { delay } from "../_shared/constants.ts";
@@ -21,7 +19,6 @@ import {
 import {
   checkAndReturnUser,
   checkUsernameCodes,
-  getSupabaseUser,
   setSelectedIzbushka,
 } from "../_shared/supabase/users.ts";
 import {
@@ -37,7 +34,6 @@ import {
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
-import C from "https://esm.sh/v135/bufferutil@4.0.8/denonext/bufferutil.mjs";
 
 export type CreateUserT = {
   id: number;
@@ -619,10 +615,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       await delay(500);
       const textInvite = `${
         language_code === "ru"
-          ? `🏰 Приглашение в Тридевятое Царство 🏰\n\nНажми на ссылку чтобы присоединиться!\n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nПосле подключения к боту нажми на кнопку "Izbushka", чтобы войти на видео встречу.`
-          : `Invitation to the Three-Sacred-Tower\n\nPress the link to join! \n\nhttps://t.me/${botUsername}?start=${select_izbushka}_${username}\n\nAfter connecting to the bot, press the "Izbushka" button to enter the video meeting.`
+          ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.\n[Инструкция подключения](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
+          : `Invitation to the **DAO 999 NFT**\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the **Izbushka** button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
       }`;
-      await ctx.reply(textInvite);
+
+      await ctx.reply(textInvite, { parse_mode: "Markdown" });
+
       return;
     } catch (error) {
       await bugCatcherRequest("ai_koshey_bot (select_izbushka)", error);
@@ -669,5 +667,22 @@ Deno.serve(async (req) => {
     console.error(err);
   }
 });
+// const textInvite = `${
+//   language_code === "ru"
+//     ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.`
+//     : `Invitation to the **DAO 999 NFT**\n\nPress the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the **Izbushka** button to enter the video meeting.`
+// }`;
+// const buttons = [
+//   {
+//     text: `${
+//       language_code === "ru"
+//         ? "Видео инструкция подключения"
+//         : "Video instruction for connecting"
+//     }`,
+//     web_app: {
+//       url: `https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5`,
+//     },
+//   },
+// ];
 
 // supabase functions deploy ai-koshey --no-verify-jwt

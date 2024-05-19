@@ -97,7 +97,7 @@ serve(async (req: Request): Promise<Response> => {
   `;
 
   const systemPrompt = `
-    You are this user's personal assistant:
+    You are this user's personal digital avatar:
     """
     ${full_name}
     """
