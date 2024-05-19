@@ -1,3 +1,4 @@
+import { bugCatcherRequest } from "../telegram/bots.ts";
 import {
   CheckPassportIsExistingResult,
   CheckPassportResult,
@@ -16,12 +17,14 @@ export async function setPassport(
       .select("*");
 
     if (error) {
+      await bugCatcherRequest("setPassport", error);
       throw new Error("Error setPassport: " + error);
     }
 
     const passport_id = data && data[0].passport_id;
     return passport_id;
   } catch (error) {
+    await bugCatcherRequest("setPassport", error);
     throw new Error("Error setPassport: " + error);
   }
 }
@@ -57,7 +60,8 @@ export async function createPassport({
       .single();
     console.log(dataRoom, "dataRoom");
     if (errorRoom) {
-      throw new Error("Error createPassport: " + errorRoom);
+      await bugCatcherRequest("createPassport", errorRoom);
+      throw new Error(errorRoom.message);
     }
 
     const passport: UserPassport[] = [
@@ -83,6 +87,7 @@ export async function createPassport({
       .select("*");
     console.log(dataPassport, "checkPassport dataPassport");
     if (errorPassport) {
+      await bugCatcherRequest("createPassport", errorPassport);
       throw new Error(errorPassport.message);
     }
     return {
@@ -90,6 +95,7 @@ export async function createPassport({
       passport_id: dataPassport[0].passport_id,
     };
   } catch (error) {
+    await bugCatcherRequest("createPassport", error);
     throw new Error("throw createPassport: " + error);
   }
 }
@@ -118,6 +124,7 @@ export const checkPassport = async (
       .eq("is_owner", false).single();
     console.log(existingPassport, "existingPassport");
     if (error) {
+      await bugCatcherRequest("checkPassport", error);
       throw new Error("Error checkPassport: " + error);
     }
     if (existingPassport) {
@@ -132,6 +139,7 @@ export const checkPassport = async (
       };
     }
   } catch (error) {
+    await bugCatcherRequest("checkPassport", error);
     throw new Error("Error checkPassport: " + error);
   }
 };
@@ -146,15 +154,21 @@ export async function getPassportByRoomId(
       .eq("type", "room");
 
     if (error) {
+      await bugCatcherRequest("getPassportByRoomId", error);
       throw new Error("Error getPassportByRoomId: " + error);
     }
 
     if (data === null) {
+      await bugCatcherRequest(
+        "getPassportByRoomId",
+        "No data returned from select",
+      );
       throw new Error("No data returned from select");
     }
 
     return data;
   } catch (error) {
+    await bugCatcherRequest("getPassportByRoomId", error);
     throw new Error("Error getPassportByRoomId: " + error);
   }
 }
@@ -169,6 +183,7 @@ export async function getPassportsTasksByUsername(
       .eq("type", "task");
 
     if (error) {
+      await bugCatcherRequest("getPassportsTasksByUsername", error);
       throw new Error(
         "Error getPassportsTasksByUsername: " + JSON.stringify(error),
       );
@@ -176,6 +191,7 @@ export async function getPassportsTasksByUsername(
 
     return data.map((item) => item.task_id);
   } catch (error) {
+    await bugCatcherRequest("getPassportsTasksByUsername", error);
     throw new Error("Error getPassportsTasksByUsername: " + error);
   }
 }
@@ -194,11 +210,13 @@ export async function checkPassportByRoomId(
       .eq("type", type);
 
     if (error) {
+      await bugCatcherRequest("checkPassportByRoomId", error);
       throw new Error("Error checkPassportByRoomId: " + error);
     }
 
     return data && data.length > 0;
   } catch (error) {
+    await bugCatcherRequest("checkPassportByRoomId", error);
     throw new Error("Error checkPassportByRoomId: " + error);
   }
 }

@@ -1,3 +1,4 @@
+import { bugCatcherRequest } from "../telegram/bots.ts";
 import { supabase } from "./index.ts";
 
 interface CreateTask {
@@ -66,15 +67,18 @@ export const createTask = async ({
       ]).select("*");
 
     if (taskError) {
+      await bugCatcherRequest("createTask", taskError);
       throw new Error("Error createTask: " + taskError);
     }
 
     if (!taskData || taskData.length === 0) {
+      await bugCatcherRequest("createTask", "Task not found");
       throw new Error("Task not found");
     }
 
     return taskData[0];
   } catch (error) {
+    await bugCatcherRequest("createTask", error);
     throw new Error("Error createTask: " + error);
   }
 };
@@ -96,6 +100,7 @@ export const updateTaskByPassport = async ({
     .select("*");
 
   if (updateTaskError) {
+    await bugCatcherRequest("updateTaskByPassport", updateTaskError);
     throw new Error("Error updateTaskByPassport: " + updateTaskError);
   }
 

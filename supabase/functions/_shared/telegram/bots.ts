@@ -97,16 +97,17 @@ export const logBot = new Bot(logBotToken || "");
 export const bugCatcherDevBot = new Bot(bugCatcherDevBotToken || "");
 export const babaYagaChatId = Deno.env.get("AI_BABA_YAGA_CHAT_ID");
 
-export const bugCatcherRequest = async (title: string, data: any) => {
+export const bugCatcherRequest = async (title: string, error: any) => {
   try {
     if (babaYagaChatId) {
       await bugCatcherDevBot.api.sendMessage(
         babaYagaChatId,
-        `👾 ${title}\n\n${JSON.stringify(data)}`,
+        `👾 ${title}\n\n${JSON.stringify(error)}`,
       );
+      throw new Error(`👾 ${title}\n\n${JSON.stringify(error)}`);
     }
   } catch (error) {
-    console.error(error, "bugCatcherRequest error");
+    throw new Error(`👾 ${title}\n\n${JSON.stringify(error)}`);
   }
 };
 

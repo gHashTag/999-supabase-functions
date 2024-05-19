@@ -10,7 +10,7 @@ import { createChatCompletionJson } from "../_shared/openai/createChatCompletion
 import { createEmoji } from "../_shared/openai/createEmoji.ts";
 
 import { SITE_URL } from "../_shared/constants.ts";
-import { supportRequest } from "../_shared/telegram/bots.ts";
+import { bugCatcherRequest, supportRequest } from "../_shared/telegram/bots.ts";
 import {
   createPassport,
   getPassportByRoomId,
@@ -52,49 +52,63 @@ async function sendTasksToTelegram({
   token,
   passports,
 }: SendTasksToTelegramT) {
-  const assignee = username === null
-    ? ""
-    : `${first_name} ${last_name || ""} (@${username})`;
-
-  if (passports && passports.length > 0) {
+  try {
+    const assignee = username
+      ? `${first_name} ${last_name || ""} (@${username})`
+      : "";
     const bot = new Bot(token);
-    for (const passport of passports) {
+
+    await Promise.all(passports.map(async (passport) => {
       if (passport?.chat_id) {
-        await bot.api.sendMessage(
-          passport.chat_id,
-          `${translated_text}\n${assignee}`,
-        );
+        let success = false;
+        while (!success) {
+          try {
+            await bot.api.sendMessage(
+              passport.chat_id,
+              `${translated_text}\n${assignee}`,
+            );
+            success = true;
+          } catch (error) {
+            if (error.error_code === 429) {
+              const retryAfter = error.parameters.retry_after;
+              console.log(
+                `Rate limit exceeded. Retrying after ${retryAfter} seconds...`,
+              );
+              await new Promise((resolve) =>
+                setTimeout(resolve, retryAfter * 1000)
+              );
+            } else {
+              throw error;
+            }
+          }
+        }
       }
-    }
+    }));
+  } catch (error) {
+    await bugCatcherRequest("sendTasksToTelegram", error);
+    throw new Error(`sendTasksToTelegram:${error}`);
   }
 }
 
 const getPreparedUsers = (usersFromSupabase: PassportUser[]) => {
   return usersFromSupabase.map((user: PassportUser) => {
     const concatName = () => {
-      if (!!user.first_name && !user.last_name) {
-        return user?.first_name;
-      }
-      if (!user.first_name && !!user.last_name) {
-        return user.last_name;
-      }
-      if (!!user.first_name && !!user.last_name) {
+      if (user?.first_name && !user?.last_name) return user?.first_name;
+      if (!user?.first_name && user?.last_name) return user?.last_name;
+      if (user.first_name && user.last_name) {
         return `${user?.first_name} ${user?.last_name}`;
       }
     };
-    return {
-      ...user,
-      concat_name: concatName(),
-    };
+    return { ...user, concat_name: concatName() };
   });
 };
 
-Deno.serve(async (req: Request) => {
+// @ts-ignore
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: { ...corsHeaders, ...headers } });
   }
   const url = new URL(req.url);
-
   if (
     url.searchParams.get("secret") !==
       Deno.env.get("NEXT_PUBLIC_FUNCTION_SECRET")
@@ -107,7 +121,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (type === "transcription.success") {
-      // await supportRequest("transcription.success", data);
+      await supportRequest("transcription.success", data);
 
       const recording_id = data.recording_id;
       if (!recording_id) throw new Error("recording_id is null");
@@ -127,6 +141,10 @@ Deno.serve(async (req: Request) => {
 
         const summaryJSONResponse = await fetch(summaryJsonPresignedUrl);
         if (!summaryJSONResponse.ok) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "summaryJSONResponse is not ok",
+          );
           throw new Error("summaryJSONResponse is not ok");
         }
 
@@ -142,7 +160,6 @@ Deno.serve(async (req: Request) => {
         );
 
         const summary_short = summarySection ? summarySection.paragraph : "";
-
         const titleWithEmoji = await createEmoji(
           summary_short,
         );
@@ -199,21 +216,16 @@ Deno.serve(async (req: Request) => {
         const tasksArray = tasks && JSON.parse(tasks).tasks;
 
         if (!Array.isArray(tasksArray)) {
+          await bugCatcherRequest("create-tasks", "tasksArray is not array");
           throw new Error("tasksArray is not array");
         }
 
-        const newTasks = tasksArray.map((task: Task) => {
-          // Если user_id отсутствует или пуст, присваиваем значение по умолчанию
-          if (!task.user_id) {
-            task.user_id = "28772cec-eba4-4375-a5a1-090bba2909fa";
-          }
-          return task;
-        });
+        const newTasks = tasksArray.map((task: Task) => ({
+          ...task,
+          user_id: task.user_id || "28772cec-eba4-4375-a5a1-090bba2909fa",
+        }));
 
-        const { roomData, isExistRoom } = await getRoomById(
-          data?.room_id,
-        );
-
+        const { roomData, isExistRoom } = await getRoomById(data?.room_id);
         if (!isExistRoom || !roomData) throw new Error("Room not found");
 
         const { language_code, id, token, description } = roomData;
@@ -224,7 +236,6 @@ Deno.serve(async (req: Request) => {
         if (!token) throw new Error("token is null");
 
         const workspace = await getWorkspaceById(workspace_id);
-
         let workspace_name;
         if (workspace) {
           workspace_name = workspace[0].title;
@@ -358,7 +369,7 @@ Deno.serve(async (req: Request) => {
       );
     }
   } catch (err) {
-    console.error(err);
+    await bugCatcherRequest("create-tasks", err);
     return new Response(
       JSON.stringify({ message: "Error: " + err }),
       {
