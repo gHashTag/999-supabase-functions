@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.170.0/http/server.ts";
 import "https://deno.land/x/xhr@0.2.1/mod.ts";
 
 import { oneLine, stripIndent } from "https://esm.sh/common-tags@1.8.2";
-import { supabase, supabaseSQL } from "../_shared/supabase/index.ts";
 
 import {
   embeddingResponse,
@@ -81,23 +80,21 @@ serve(async (req: Request): Promise<Response> => {
 
   const prompt = stripIndent`${oneLine`
   You are the head of the dao 999 nft digital avatar bank, which is very helpful when it comes to talking about the tasks of its inhabitants! Always answer honestly and be as helpful as you can! Respond in ${language_code} language.`}
-    Context sections:
+    Current conversation: 
     ${contextText}
     Question: """
     ${query}
-   
-   
     Answer as simple text:
   `;
 
   const assistantPrompt = `
-    Past dialogue with the user: """
+    History dialogue with the user ${full_name}: """
     ${messages}
     """
   `;
 
   const systemPrompt = `
-    You are this user's personal assistant:
+    You are user's ${full_name} personal digital avatar:
     """
     ${full_name}
     """
@@ -124,14 +121,9 @@ serve(async (req: Request): Promise<Response> => {
 
     const { izbushka } = await getSelectIzbushkaId(dataUser.select_izbushka);
 
-    const commonPrompt =
-      `User ${dataUser.first_name} ${dataUser.last_name}: ${query}\n\nAssistant: ${ai_content}`;
-
-    const embedding = await embeddingResponse(commonPrompt);
-
     if (
       !izbushka || !dataUser.user_id || !dataUser.username ||
-      !izbushka.workspace_id || !izbushka.room_id || !embedding
+      !izbushka.workspace_id || !izbushka.room_id
     ) {
       throw new Response("Izbushka not found", { status: 400 });
     }
@@ -143,7 +135,7 @@ serve(async (req: Request): Promise<Response> => {
       room_id: izbushka?.room_id,
       content: input,
       ai_content,
-      embedding: JSON.stringify(embedding),
+      embedding: JSON.stringify(embeddingQuery),
     };
 
     await setMessage(messageObject);

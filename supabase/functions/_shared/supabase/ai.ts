@@ -159,11 +159,11 @@ export const matchEmbedding = async (
       .rpc(rpc_function_name, {
         embedding_vector: JSON.stringify(embedding),
         match_threshold: 0.4,
-        match_count: 4,
+        match_count: 9,
         search_username,
       })
       .select("*")
-      .limit(4);
+      .limit(9);
 
     if (error) {
       throw new Error(

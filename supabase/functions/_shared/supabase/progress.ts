@@ -72,48 +72,24 @@ export async function updateResult(
 
 export async function getLastCallback(
   language: string,
-): Promise<LastCallbackResult | null> {
+): Promise<number | null> {
   try {
-    const lessonResponse = await supabase
+    const { data, error } = await supabase
       .from(language)
-      .select("lesson_number")
-      .order("lesson_number", { ascending: false })
-      .limit(1);
+      .select("id")
+      .order("id", { ascending: false })
+      .limit(1)
+      .single();
 
-    if (lessonResponse.error) {
-      throw new Error("Error getLastCallback: " + lessonResponse.error.message);
+    if (error) {
+      throw new Error("Error getLastCallback: " + error.message);
     }
 
-    const lessonData = lessonResponse.data;
-
-    if (!lessonData || lessonData.length === 0) {
+    if (!data) {
       return null;
     }
 
-    const largestLessonNumber = lessonData[0].lesson_number;
-
-    const subtopicResponse = await supabase
-      .from(language)
-      .select("subtopic")
-      .eq("lesson_number", largestLessonNumber)
-      .order("subtopic", { ascending: false })
-      .limit(1);
-
-    if (subtopicResponse.error) {
-      throw new Error(
-        "Error getLastCallback: " + subtopicResponse.error.message,
-      );
-    }
-
-    const subtopicData = subtopicResponse.data;
-
-    if (!subtopicData || subtopicData.length === 0) {
-      return null;
-    }
-
-    const largestSubtopic = subtopicData[0].subtopic;
-
-    return { lesson_number: largestLessonNumber, subtopic: largestSubtopic };
+    return data.id;
   } catch (error) {
     throw new Error("Error getLastCallback: " + error);
   }

@@ -6,3 +6,4 @@ supabase/functions/.env
 supabase/.DS_Store
 
 supabase/functions/.DS_Store
+node_modules

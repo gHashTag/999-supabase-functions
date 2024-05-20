@@ -84,8 +84,13 @@ pythonDevBot.on("message:text", async (ctx) => {
   const query = ctx.message.text;
 
   try {
-    const feedback = await getAiFeedbackFromSupabase( {query} );
-    await ctx.reply(feedback.content, { parse_mode: "Markdown" });
+    const feedback = await getAiFeedbackFromSupabase({
+      id_array: [],
+      username: ctx.from?.username || "",
+      language_code: ctx.from?.language_code || "",
+      query,
+    });
+    await ctx.reply(feedback.ai_content, { parse_mode: "Markdown" });
     return;
   } catch (error) {
     console.error("Ошибка при получении ответа AI:", error);
@@ -301,13 +306,11 @@ pythonDevBot.on("callback_query:data", async (ctx) => {
         const correctAnswers = await getCorrects({ user_id: user_id.toString(), language });
         const allAnswers = await getCorrects({ user_id: user_id.toString(), language: "all" });
 
-        const lastCallbackContext = await getLastCallback(language);
-        console.log(lastCallbackContext);
-        if (lastCallbackContext) {
-          const callbackResult =
-            `${language}_${lastCallbackContext.lesson_number}_${lastCallbackContext.subtopic}`;
-          if (newPath === callbackResult) {
-            const correctProcent = correctAnswers * 0.8;
+        const lastCallbackId = await getLastCallback(language);
+        console.log(lastCallbackId);
+        if (lastCallbackId) {
+          if (questions[0].id === lastCallbackId) {
+            const correctProcent = (correctAnswers / lastCallbackId) * 100;
             if (correctProcent >= 80) {
               await updateResult({
                 user_id: user_id.toString(),

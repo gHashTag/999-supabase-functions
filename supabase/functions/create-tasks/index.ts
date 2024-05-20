@@ -280,21 +280,23 @@ Deno.serve(async (req) => {
             `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;
 
           const bot = new Bot(token);
+
+          const buttons = [
+            {
+              text: language_code === "ru" ? "Открыть встречу" : "Open meet",
+              url: summary_short_url,
+              web_app: {
+                url: summary_short_url,
+              },
+            },
+          ];
+
           await bot.api.sendMessage(
             passport.chat_id,
             `🚀 ${translated_short}`,
             {
               reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: language_code === "ru"
-                        ? "Открыть встречу"
-                        : "Open meet",
-                      url: summary_short_url,
-                    },
-                  ],
-                ],
+                inline_keyboard: [buttons],
               },
             },
           );
