@@ -80,7 +80,7 @@ serve(async (req: Request): Promise<Response> => {
 
   const prompt = stripIndent`${oneLine`
   You are the head of the dao 999 nft digital avatar bank, which is very helpful when it comes to talking about the tasks of its inhabitants! Always answer honestly and be as helpful as you can! Respond in ${language_code} language.`}
-    Context sections:
+    Current conversation: 
     ${contextText}
     Question: """
     ${query}
