@@ -1,31 +1,33 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  NEXT_PUBLIC_SUPABASE_URL,
+  LOCAL_SUPABASE_URL,
+  LOCAL_SUPABASE_URL_ANON_KEY,
   SUPABASE_ANON_KEY,
   SUPABASE_URL,
 } from "../constants.ts";
 
+// Prod
 export const client = () => {
   const supabaseClient = createClient(
     SUPABASE_URL ?? "",
     SUPABASE_ANON_KEY ?? "",
   );
+
   return supabaseClient;
 };
 
 export const supabase = client();
 
-export const clientSQL = () => {
+export const clientInvoke = () => {
   const supabaseClient = createClient(
-    NEXT_PUBLIC_SUPABASE_URL ?? "",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    LOCAL_SUPABASE_URL ?? "",
+    LOCAL_SUPABASE_URL_ANON_KEY ?? "",
   );
 
   return supabaseClient;
 };
 
-export const supabaseSQL = clientSQL();
+export const supabaseLocal = clientInvoke();
 
 // export function supabaseAdapter<T>(
 //   { supabase, table }: { supabase: SupabaseClient; table: string },
