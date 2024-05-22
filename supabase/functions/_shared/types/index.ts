@@ -313,4 +313,12 @@ export interface getAiSupabaseFeedbackT {
   language_code: string;
 }
 
+export interface UserProfile {
+  username: string;
+  company: string;
+  position: string;
+  description: string;
+  interests: string;
+}
+
 export type AiRole = "system" | "user" | "assistant";

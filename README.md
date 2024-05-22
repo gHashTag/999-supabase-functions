@@ -85,3 +85,15 @@ https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://<PROJECT_NAME>.fu
 ```
 
 supabase functions serve --env-file .env.local --no-verify-jwt
+
+Start Project <19.06.2024>
+
+1. supabase start
+2. supabase functions serve --env-file supabase/functions/.env --no-verify-jwt
+3. ngrok http 54321
+
+- for LOCAL_SUPABASE_URL_ANON_KEY and other Supabase Variables:
+  supabase status
+
+- for tests:
+  deno test --allow-all --env=supabase/functions/.env supabase/functions/tests/game-step-test.ts
