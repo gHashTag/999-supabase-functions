@@ -79,20 +79,6 @@ javaScriptDevBot.command("start", async (ctx) => {
   }
 });
 
-javaScriptDevBot.command("profile", async (ctx) => {
-  await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
-
-  await ctx.reply(isRu ? "Создать профиль" : "Create profile", { reply_markup: { inline_keyboard: [[{ text: isRu ? "Создать профиль" : "Create profile", callback_data: "create_profile" }]] } });
-  return
-});
-
-javaScriptDevBot.command("digitalavatar", async (ctx) => {
-  await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
-  await ctx.reply(isRu ? "Пожалуйста, укажите ваше video_id" : "Please, specify your video_id:", { reply_markup: { force_reply: true } });
-});
-
 javaScriptDevBot.on("message:text", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   console.log(ctx);
