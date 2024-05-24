@@ -2,7 +2,7 @@ import { model_ai } from "../constants.ts";
 import { openai } from "../openai/client.ts";
 import GPT3Tokenizer from "https://esm.sh/gpt3-tokenizer@1.1.5";
 import { getAiFeedbackT, getAiSupabaseFeedbackT } from "../types/index.ts";
-import { supabase, supabaseSQL } from "./index.ts";
+import { supabase, supabaseInvoke } from "./index.ts";
 
 export const tokenizer = new GPT3Tokenizer({ type: "gpt3" });
 
@@ -127,7 +127,7 @@ export const matchEmbeddingIds = async (
   embeddingUser: unknown,
 ) => {
   try {
-    const { data, error } = await supabaseSQL
+    const { data, error } = await supabaseInvoke
       .rpc("query_embeddings_tasks_with_ids", {
         id_array,
         embedding_vector: JSON.stringify(embeddingUser),
@@ -155,7 +155,7 @@ export const matchEmbedding = async (
   search_username: string,
 ) => {
   try {
-    const { data, error } = await supabaseSQL
+    const { data, error } = await supabaseInvoke
       .rpc(rpc_function_name, {
         embedding_vector: JSON.stringify(embedding),
         match_threshold: 0.4,

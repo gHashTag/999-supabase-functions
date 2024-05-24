@@ -35,7 +35,6 @@ import {
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
-import { createVideo } from "../_shared/heygen/index.ts";
 
 export type CreateUserT = {
   id: number;
@@ -52,24 +51,12 @@ export type CreateUserT = {
 };
 
 const startIzbushka = async (ctx: Context, language_code: string) => {
-
-  const buttons = [
-    {
-      text: `${language_code === "ru" ? "Войти в Избушку" : "Enter the room"}`,
-      web_app: { url: "https://dao999nft.com/show-izbushka" },
-    },
-  ];
-  
   const isRu = ctx.from?.language_code === "ru";
-  const text = isRu ? `Начать встречу` : `Start the meet`;
-
+  const text = isRu
+    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
+    : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
   await ctx.reply(
     text,
-    {
-      reply_markup: {
-        inline_keyboard: [buttons],
-      },
-    },
   );
   return;
 };
@@ -153,21 +140,6 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
   return menuButton;
 };
 
-// Обработчик команды "avatar"
-botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
-  await ctx.replyWithChatAction("typing");
-  const username = ctx?.update?.message?.from?.username;
-  await ctx.reply(
-    `Пришли текст`,
-    {
-      reply_markup: {
-        force_reply: true,
-      },
-    },
-  );
-  return;
-});
-
 // Обработчик команды "start"
 botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   await ctx.replyWithChatAction("typing");
@@ -194,7 +166,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
           if (isInviterExist && invitation_codes) {
             const first_name = message?.from?.first_name;
-            const last_name = message?.from?.last_name || "";
+            const last_name = message?.from?.last_name;
 
             if (username) {
               // Check if the user exists and create it if it doesn't
@@ -204,7 +176,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
               if (!isUserExist) {
                 if (
-                  first_name && username &&
+                  first_name && last_name && username &&
                   message?.from?.id &&
                   message?.from?.language_code && message?.chat?.id
                 ) {
@@ -235,9 +207,9 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                   const { izbushka } = await getSelectIzbushkaId(
                     select_izbushka,
                   );
-                  console.log(izbushka, "izbushka");
+
                   if (
-                    izbushka && user && first_name &&
+                    izbushka && user && first_name && last_name &&
                     user.telegram_id && izbushka.workspace_id
                   ) {
                     const passport_user: PassportUser = {
@@ -252,7 +224,6 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                       is_owner: false,
                       photo_url: user.photo_url || null,
                     };
-                    console.log(passport_user, "passport_user");
 
                     const isPassportExist = await checkPassportByRoomId(
                       user.user_id,
@@ -271,30 +242,20 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                       );
                     }
                     language_code && await startIzbushka(ctx, language_code);
-                    return;
                   } else {
                     const textError = `${
                       isRu
                         ? "🤔 Ошибка: getSelectIzbushkaId."
                         : "🤔 Error: getSelectIzbushkaId."
-                    }\n${JSON.stringify(izbushka)}`;
+                    }\n${izbushka}`;
                     await ctx.reply(
                       textError,
                     );
                     throw new Error(textError);
                   }
+                  return;
                 }
-                return;
               }
-              return;
-            } else {
-              const textError = `${
-                language_code === "ru"
-                  ? "🤔 Ошибка: Username not found."
-                  : "🤔 Error: Username not found."
-              }`;
-              await ctx.reply(textError);
-              throw new Error(textError);
             }
           }
         } catch (error) {
@@ -303,12 +264,12 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
               ? "🤔 Что-то пошло не так, попробуйте ещё раз."
               : "🤔 Something went wrong, try again."
           }\n${error}`;
-          // await ctx.reply(textError);
+          await ctx.reply(textError);
           await bugCatcherRequest(
             "ai_koshey_bot (select_izbushka && inviter)",
             error,
           );
-          throw new Error(`${textError}`, { cause: ctx });
+          return;
         }
       } else {
         if (username) {
@@ -325,12 +286,11 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
     }
   } else {
     if (username) {
-      console.log(username, "username");
       try {
         const { isUserExist } = await checkAndReturnUser(
           username,
         );
-        console.log(isUserExist, "isUserExist");
+
         if (isUserExist) {
           language_code && await welcomeMenu(ctx, language_code);
         } else {
@@ -376,37 +336,14 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
   const inviter = ctx?.message?.text;
   const message = ctx.update.message;
   const language_code = message?.from?.language_code;
-
-  const username = message?.from?.username;
-
+  
   const isRu = ctx.from?.language_code === "ru";
   // Check if the message is a reply (if there is a reply_to_message)
   if (ctx?.message?.reply_to_message) {
     // Check if the original message text contains a specific text
     const query = ctx.message.text;
     const originalMessageText = ctx?.message?.reply_to_message?.text;
-
-    if (originalMessageText && originalMessageText.includes("Пришли текст")) {
-      const text = ctx?.message?.text || "";
-
-      if (!text && !message?.from?.id) throw new Error("No text or user_id");
-      if (!username) throw new Error("No username");
-
-      const { user } = await checkAndReturnUser(
-        username,
-      );
-
-      if (!user) throw new Error("User not found");
-
-      await createVideo({
-        avatar_id: user?.avatar_id,
-        voice_id: user?.voice_id,
-        text,
-        user_id: user.user_id,
-      });
-      await ctx.reply(`${language_code === "ru" ? "Ожидайте, скоро вам прийдет видео" : "Wait, your video is ready"}`);
-      return;
-
+    console.log(originalMessageText, "originalMessageText");
     if (ctx?.message?.reply_to_message) {
       const originalMessageText = ctx?.message?.reply_to_message?.text;
   
@@ -468,11 +405,12 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         );
 
         if (isInviterExist) {
+          console.log(message, "message");
           const user = {
             id: message?.from?.id,
             username: message?.from?.username,
             first_name: message?.from?.first_name,
-            last_name: message?.from?.last_name || "",
+            last_name: message?.from?.last_name,
             is_bot: message?.from?.is_bot,
             language_code,
             chat_id: message?.chat?.id,
@@ -480,22 +418,18 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             invitation_codes: "",
             telegram_id: message?.from?.id,
           };
-
+          console.log(user, "user");
           const newUser = await createUser(user);
           await ctx.replyWithChatAction("typing");
-          if (newUser) {
-            await ctx.reply(
-              intro({ language_code }),
-              {
-                reply_markup: {
-                  inline_keyboard: menuButton({ language_code }),
-                },
+          newUser && await ctx.reply(
+            intro({ language_code }),
+            {
+              reply_markup: {
+                inline_keyboard: menuButton({ language_code }),
               },
-            );
-            return;
-          } else {
-            throw new Error("Error: createUser");
-          }
+            },
+          );
+          return;
         } else {
           const textError = `🔒 ${
             isRu
@@ -513,7 +447,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           return;
         }
       } catch (error) {
-        throw new Error(error, { cause: ctx });
+        console.error(error);
       }
     } else {
       console.log("else!!!");
@@ -735,8 +669,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             : "Error: failed to load room."
         }`;
         await ctx.reply(textError);
-        await bugCatcherRequest("Error: failed to load room", ctx);
-        throw new Error("Error: failed to load room");
+        await bugCatcherRequest("ai_koshey_bot (show_izbushka)", ctx);
+        throw new Error("ai_koshey_bot (show_izbushka)");
       }
       return;
     } catch (error) {
@@ -760,14 +694,13 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       }`;
       await ctx.reply(
         textForInvite,
-        { parse_mode: "Markdown" },
       );
       await delay(500);
 
       const textInvite = `${
         isRu
           ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.\n[Инструкция подключения](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
-          : `Invitation to the DAO 999 NFT\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the **Izbushka** button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
+          : `Invitation to the DAO 999 NFT\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the <b>Izbushka</b> button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
       }`;
 
       await ctx.reply(textInvite, { parse_mode: "Markdown" });
@@ -784,10 +717,6 @@ await botAiKoshey.api.setMyCommands([
   {
     command: "/start",
     description: "Start chatting with Ai Koshey",
-  },
-  {
-    command: "/avatar",
-    description: "Create an avatar",
   },
   // {
   //   command: "/room",
@@ -820,11 +749,8 @@ Deno.serve(async (req) => {
     return await handleUpdateAiKoshey(req);
   } catch (err) {
     console.error(err);
-    throw new Error(`Deno.serve ${err}`, { cause: req });
   }
 });
-
-
 // const textInvite = `${
 //   isRu
 //     ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.`

@@ -21,20 +21,29 @@ if (!Deno.env.get("HEYGEN_URL")) {
 
 if (!Deno.env.get("API_KEY")) {
   throw new Error("API_KEY is not set");
+}
 
 if (!Deno.env.get("LOCAL_SUPABASE_URL")) {
   throw new Error("LOCAL_SUPABASE_URL is not set");
+}
 
 export const DEV = Deno.env.get("DEV") === "true" ? true : false;
 
 export const HEYGEN_URL = Deno.env.get("HEYGEN_URL");
 export const API_KEY = Deno.env.get("API_KEY");
 
-export const SITE_URL = DEV
-  ? Deno.env.get("LOCAL_SUPABASE_URL")
-  : Deno.env.get("PRODUCTION_URL");
+// local
+export const LOCAL_SUPABASE_URL = Deno.env.get("LOCAL_SUPABASE_URL");
+export const LOCAL_SUPABASE_URL_ANON_KEY = Deno.env.get(
+  "LOCAL_SUPABASE_URL_ANON_KEY",
+);
 
 export const PRODUCTION_URL = Deno.env.get("PRODUCTION_URL");
+export const SITE_URL = DEV
+  ? LOCAL_SUPABASE_URL
+  : PRODUCTION_URL;
+
+
 
 export const NEXT_PUBLIC_SUPABASE_URL = Deno.env.get(
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -47,15 +56,12 @@ export const NEXT_PUBLIC_SUPABASE_ANON_KEY = Deno.env.get(
 export const SUPABASE_URL = DEV
   ? Deno.env.get("NEXT_PUBLIC_SUPABASE_URL")
   : Deno.env.get("SUPABASE_URL");
+  
 export const SUPABASE_ANON_KEY = DEV
   ? Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
   : Deno.env.get("SUPABASE_ANON_KEY");
 
-// local
-export const LOCAL_SUPABASE_URL = Deno.env.get("LOCAL_SUPABASE_URL");
-export const LOCAL_SUPABASE_URL_ANON_KEY = Deno.env.get(
-  "LOCAL_SUPABASE_URL_ANON_KEY",
-);
+
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
