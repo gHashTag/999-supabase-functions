@@ -357,6 +357,16 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders },
           },
         );
+      } else {
+        return new Response(
+          JSON.stringify({
+            message: "isExistRoomAsset true",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders },
+          },
+        );
       }
     } else {
       return new Response(
@@ -370,7 +380,7 @@ Deno.serve(async (req) => {
       );
     }
   } catch (err) {
-    await bugCatcherRequest("create-tasks", err);
+    await bugCatcherRequest("create-tasks", JSON.stringify(err));
     return new Response(
       JSON.stringify({ message: "Error: " + err }),
       {

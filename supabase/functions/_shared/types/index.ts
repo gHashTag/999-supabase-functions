@@ -24,6 +24,8 @@ export type SupabaseUser = TUser & {
   select_izbushka?: string | null;
   position?: string | null;
   designation?: string | null;
+  avatar_id: string;
+  voice_id: string;
 };
 
 export interface UserContext {
