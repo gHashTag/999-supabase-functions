@@ -151,7 +151,8 @@ export async function getPassportByRoomId(
     const { data, error } = await supabase.from("user_passport")
       .select("*")
       .eq("room_id", room_id)
-      .eq("type", "room");
+      .eq("type", "room")
+      .eq("is_owner", true);
 
     if (error) {
       await bugCatcherRequest("getPassportByRoomId", error);

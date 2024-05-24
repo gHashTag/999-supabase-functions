@@ -1,7 +1,3 @@
-if (!Deno.env.get("LOCAL_URL")) {
-  throw new Error("LOCAL_URL is not set");
-}
-
 if (!Deno.env.get("PRODUCTION_URL")) {
   throw new Error("PRODUCTION_URL is not set");
 }
@@ -18,10 +14,21 @@ if (!Deno.env.get("FUNCTION_SECRET")) {
   throw new Error("FUNCTION_SECRET is not set");
 }
 
+if (!Deno.env.get("HEYGEN_URL")) {
+  throw new Error("HEYGEN_URL is not set");
+}
+
+if (!Deno.env.get("API_KEY")) {
+  throw new Error("API_KEY is not set");
+}
+
 export const DEV = Deno.env.get("DEV") === "true" ? true : false;
 
+export const HEYGEN_URL = Deno.env.get("HEYGEN_URL");
+export const API_KEY = Deno.env.get("API_KEY");
+
 export const SITE_URL = DEV
-  ? Deno.env.get("LOCAL_URL")
+  ? Deno.env.get("LOCAL_SUPABASE_URL")
   : Deno.env.get("PRODUCTION_URL");
 
 export const PRODUCTION_URL = Deno.env.get("PRODUCTION_URL");

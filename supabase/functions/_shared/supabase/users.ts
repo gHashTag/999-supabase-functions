@@ -206,7 +206,7 @@ export const checkUsernameAndReturnUser = async (
 
 export async function checkAndReturnUser(
   username: string,
-): Promise<{ isUserExist: boolean; user: SupabaseUser | null }> {
+): Promise<{ isUserExist: boolean; user?: SupabaseUser }> {
   try {
     const response = await supabase
       .from("users")
@@ -217,7 +217,6 @@ export async function checkAndReturnUser(
       console.log(response.error, "error checkUsername");
       return {
         isUserExist: false,
-        user: null,
       };
     }
 

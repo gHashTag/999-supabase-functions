@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
     email,
     profileimage,
   } = await req.json();
+
   const usersData = {
     first_name,
     last_name,
