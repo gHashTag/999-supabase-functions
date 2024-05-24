@@ -35,6 +35,7 @@ import {
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
+import { createVideo } from "../_shared/heygen/index.ts";
 
 export type CreateUserT = {
   id: number;
@@ -50,18 +51,32 @@ export type CreateUserT = {
   select_izbushka: string;
 };
 
-const startIzbushka = async (ctx: Context, language_code: string) => {
+const startIzbushka = async (ctx: Context) => {
   const isRu = ctx.from?.language_code === "ru";
-  const text = isRu
-    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
-    : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
+  // const text = isRu
+  //   ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
+  //   : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
+
+  const buttons = [
+    {
+      text: `${isRu ? "Войти в Избушку" : "Enter the room"}`,
+      web_app: { url: "https://dao999nft.com/show-izbushka" },
+    },
+  ];
+
+  const text = isRu ? `Начать встречу` : `Start the meet`;
   await ctx.reply(
     text,
+    {
+      reply_markup: {
+        inline_keyboard: [buttons],
+      },
+    },
   );
   return;
 };
 
-const welcomeMenu = async (ctx: Context, language_code: string) => {
+const welcomeMenu = async (ctx: Context) => {
   const isRu = ctx.from?.language_code === "ru";
   const text = isRu
     ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`
@@ -81,9 +96,7 @@ const welcomeMenu = async (ctx: Context, language_code: string) => {
               callback_data: "water",
             },
             {
-              text: `🎺 ${
-                isRu ? "Медные трубы" : "Copper pipes"
-              }`,
+              text: `🎺 ${isRu ? "Медные трубы" : "Copper pipes"}`,
               callback_data: "copper_pipes",
             },
           ],
@@ -94,7 +107,7 @@ const welcomeMenu = async (ctx: Context, language_code: string) => {
   return;
 };
 
-const welcomeMessage = async (ctx: Context, language_code: string) => {
+const welcomeMessage = async (ctx: Context) => {
   const isRu = ctx.from?.language_code === "ru";
   const text = isRu
     ? `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`
@@ -140,6 +153,22 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
   return menuButton;
 };
 
+// Обработчик команды "avatar"
+botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
+  const isRu = ctx.from?.language_code === "ru";
+  await ctx.replyWithChatAction("typing");
+
+  await ctx.reply(
+    `${isRu ? "Пришли текст" : "Send text"}`,
+    {
+      reply_markup: {
+        force_reply: true,
+      },
+    },
+  );
+  return;
+});
+
 // Обработчик команды "start"
 botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   await ctx.replyWithChatAction("typing");
@@ -166,7 +195,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
           if (isInviterExist && invitation_codes) {
             const first_name = message?.from?.first_name;
-            const last_name = message?.from?.last_name;
+            const last_name = message?.from?.last_name || "";
 
             if (username) {
               // Check if the user exists and create it if it doesn't
@@ -176,7 +205,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
               if (!isUserExist) {
                 if (
-                  first_name && last_name && username &&
+                  first_name && username &&
                   message?.from?.id &&
                   message?.from?.language_code && message?.chat?.id
                 ) {
@@ -196,7 +225,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
                   await createUser(userObj);
 
-                  language_code && await welcomeMenu(ctx, language_code);
+                  language_code && await welcomeMenu(ctx);
                   return;
                 }
               } else {
@@ -209,7 +238,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                   );
 
                   if (
-                    izbushka && user && first_name && last_name &&
+                    izbushka && user && first_name &&
                     user.telegram_id && izbushka.workspace_id
                   ) {
                     const passport_user: PassportUser = {
@@ -241,13 +270,13 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                         select_izbushka,
                       );
                     }
-                    language_code && await startIzbushka(ctx, language_code);
+                    language_code && await startIzbushka(ctx);
                   } else {
                     const textError = `${
                       isRu
                         ? "🤔 Ошибка: getSelectIzbushkaId."
                         : "🤔 Error: getSelectIzbushkaId."
-                    }\n${izbushka}`;
+                    }\n${JSON.stringify(izbushka)}`;
                     await ctx.reply(
                       textError,
                     );
@@ -263,11 +292,11 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
             isRu
               ? "🤔 Что-то пошло не так, попробуйте ещё раз."
               : "🤔 Something went wrong, try again."
-          }\n${error}`;
+          }\n${JSON.stringify(error)}`;
           await ctx.reply(textError);
           await bugCatcherRequest(
             "ai_koshey_bot (select_izbushka && inviter)",
-            error,
+            JSON.stringify(error),
           );
           return;
         }
@@ -276,11 +305,19 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
           // Check if the user exists and send the corresponding message
           const { isUserExist } = await checkAndReturnUser(username);
           if (isUserExist) {
-            language_code && await welcomeMenu(ctx, language_code);
+            language_code && await welcomeMenu(ctx);
           } else {
-            language_code && await welcomeMessage(ctx, language_code);
+            language_code && await welcomeMessage(ctx);
           }
           return;
+        } else {
+          const textError = `${
+            language_code === "ru"
+              ? "🤔 Ошибка: Username not found."
+              : "🤔 Error: Username not found."
+          }`;
+          await ctx.reply(textError);
+          throw new Error(textError);
         }
       }
     }
@@ -292,9 +329,9 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
         );
 
         if (isUserExist) {
-          language_code && await welcomeMenu(ctx, language_code);
+          language_code && await welcomeMenu(ctx);
         } else {
-          language_code && await welcomeMessage(ctx, language_code);
+          language_code && await welcomeMessage(ctx);
         }
         return;
       } catch (error) {
@@ -307,7 +344,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
         );
         await bugCatcherRequest(
           "ai_koshey_bot (select_izbushka && inviter)",
-          error,
+          JSON.stringify(error),
         );
         throw new Error("Error: checkAndReturnUser.");
       }
@@ -319,16 +356,33 @@ botAiKoshey.command("profile", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   const isRu = ctx.from?.language_code === "ru";
 
-  await ctx.reply(isRu ? "Создать профиль" : "Create profile", { reply_markup: { inline_keyboard: [[{ text: isRu ? "Создать профиль" : "Create profile", callback_data: "create_profile" }]] } });
-  return
+  await ctx.reply(isRu ? "Создать профиль" : "Create profile", {
+    reply_markup: {
+      inline_keyboard: [[{
+        text: isRu ? "Создать профиль" : "Create profile",
+        callback_data: "create_profile",
+      }]],
+    },
+  });
+  return;
 });
 
 botAiKoshey.command("digital_avatar", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   const isRu = ctx.from?.language_code === "ru";
 
-  await ctx.reply(isRu ? "Создать цифрового аватара" : "Create digital avatar", { reply_markup: { inline_keyboard: [[{ text: isRu ? "Создать цифрового аватара" : "Create digital avatar", callback_data: "create_digital_avatar" }]] } });
-  return
+  await ctx.reply(
+    isRu ? "Создать цифрового аватара" : "Create digital avatar",
+    {
+      reply_markup: {
+        inline_keyboard: [[{
+          text: isRu ? "Создать цифрового аватара" : "Create digital avatar",
+          callback_data: "create_digital_avatar",
+        }]],
+      },
+    },
+  );
+  return;
 });
 
 botAiKoshey.on("message:text", async (ctx: Context) => {
@@ -336,58 +390,147 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
   const inviter = ctx?.message?.text;
   const message = ctx.update.message;
   const language_code = message?.from?.language_code;
-  
+  const username = message?.from?.username;
+
   const isRu = ctx.from?.language_code === "ru";
+
   // Check if the message is a reply (if there is a reply_to_message)
   if (ctx?.message?.reply_to_message) {
     // Check if the original message text contains a specific text
     const query = ctx.message.text;
     const originalMessageText = ctx?.message?.reply_to_message?.text;
-    console.log(originalMessageText, "originalMessageText");
+
     if (ctx?.message?.reply_to_message) {
       const originalMessageText = ctx?.message?.reply_to_message?.text;
+      if (originalMessageText && originalMessageText.includes(isRu
+        ? "Пришли текст"
+        : "Send text",)) {
+        const text = ctx?.message?.text || "";
   
-      if (ctx.from && originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше video_id" : "Please, specify your video_id:")) {
-        await updateUser(ctx.from.id.toString(), { video_id: query })
-        await ctx.reply(isRu ? "Пожалуйста, укажите ваше audio_id:" : "Please, specify your audio_id:", {
-          reply_markup: { force_reply: true },
+        if (!text && !message?.from?.id) throw new Error("No text or user_id");
+        if (!username) throw new Error("No username");
+  
+        const { user } = await checkAndReturnUser(
+          username,
+        );
+  
+        if (!user) throw new Error("User not found");
+  
+        await createVideo({
+          avatar_id: user?.avatar_id,
+          voice_id: user?.voice_id,
+          text,
+          user_id: user.user_id,
         });
+        await ctx.reply(`${language_code === "ru" ? "Ожидайте, скоро вам прийдет видео" : "Wait, your video is ready"}`);
         return;
       }
-  
-      if (ctx.from && originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше audio_id" : "Please, specify your audio_id:")) {
-        await updateUser(ctx.from.id.toString(), { audio_id: query })
-        await ctx.reply(isRu ? "Ваш Digital Avatar создан!" : "Your Digital Avatar is created!");
+      
+      if (
+        ctx.from && originalMessageText && originalMessageText.includes(
+          isRu
+            ? "Пожалуйста, укажите ваше avatar_id"
+            : "Please, specify your avatar_id:",
+        )
+      ) {
+        await updateUser(ctx.from.id.toString(), { avatar_id: query });
+        await ctx.reply(
+          isRu
+            ? "Пожалуйста, укажите ваше voice_id:"
+            : "Please, specify your voice_id:",
+          {
+            reply_markup: { force_reply: true },
+          },
+        );
         return;
       }
-  
-      if (ctx.from && originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше audio_id" : "Please, specify your audio_id:")) {
-        await updateUser(ctx.from.id.toString(), { audio_id: query })
-        await ctx.reply(isRu ? "Пожалуйста, укажите ваше video_id:" : "Please, specify your video_id:", {
-          reply_markup: { force_reply: true },
-        });
+
+      if (
+        ctx.from && originalMessageText && originalMessageText.includes(
+          isRu
+            ? "Пожалуйста, укажите ваше voice_id"
+            : "Please, specify your voice_id:",
+        )
+      ) {
+        await updateUser(ctx.from.id.toString(), { voice_id: query });
+        await ctx.reply(
+          isRu
+            ? "Ваш Digital Avatar создан!"
+            : "Your Digital Avatar is created!",
+        );
         return;
       }
-  
-      if (ctx.from && originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше место работы:" : "Please, specify your company name:")) {
-        await updateUser(ctx.from.id.toString(), { company: query })
-        await ctx.reply(isRu ? "Пожалуйста, укажите вашу должность:" : "Please, specify your designation:", {
-          reply_markup: { force_reply: true },
-        });
+
+      if (
+        ctx.from && originalMessageText && originalMessageText.includes(
+          isRu
+            ? "Пожалуйста, укажите ваше audio_id"
+            : "Please, specify your audio_id:",
+        )
+      ) {
+        await updateUser(ctx.from.id.toString(), { audio_id: query });
+        await ctx.reply(
+          isRu
+            ? "Пожалуйста, укажите ваше avatar_id:"
+            : "Please, specify your avatar_id:",
+          {
+            reply_markup: { force_reply: true },
+          },
+        );
         return;
       }
-  
-      if (ctx.from && originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите вашу должность:" : "Please, specify your designation:")) {
-        await updateUser(ctx.from.id.toString(), { position: query })
-        await ctx.reply(isRu ? "Пожалуйста, укажите ваши навыки и интересы:" : "Please, specify your skills and interests:", {
-          reply_markup: { force_reply: true },
-        });
+
+      if (
+        ctx.from && originalMessageText && originalMessageText.includes(
+          isRu
+            ? "Пожалуйста, укажите ваше место работы:"
+            : "Please, specify your company name:",
+        )
+      ) {
+        await updateUser(ctx.from.id.toString(), { company: query });
+        await ctx.reply(
+          isRu
+            ? "Пожалуйста, укажите вашу должность:"
+            : "Please, specify your designation:",
+          {
+            reply_markup: { force_reply: true },
+          },
+        );
         return;
       }
-  
-      if (ctx.from && originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваши навыки и интересы:" : "Please, specify your skills and interests:")) {
-        await updateUser(ctx.from.id.toString(), { designation: query })
-        await ctx.reply(isRu ? "Спасибо за предоставленную информацию!" : "Thank you for the provided information!");
+
+      if (
+        ctx.from && originalMessageText && originalMessageText.includes(
+          isRu
+            ? "Пожалуйста, укажите вашу должность:"
+            : "Please, specify your designation:",
+        )
+      ) {
+        await updateUser(ctx.from.id.toString(), { position: query });
+        await ctx.reply(
+          isRu
+            ? "Пожалуйста, укажите ваши навыки и интересы:"
+            : "Please, specify your skills and interests:",
+          {
+            reply_markup: { force_reply: true },
+          },
+        );
+        return;
+      }
+
+      if (
+        ctx.from && originalMessageText && originalMessageText.includes(
+          isRu
+            ? "Пожалуйста, укажите ваши навыки и интересы:"
+            : "Please, specify your skills and interests:",
+        )
+      ) {
+        await updateUser(ctx.from.id.toString(), { designation: query });
+        await ctx.reply(
+          isRu
+            ? "Спасибо за предоставленную информацию!"
+            : "Thank you for the provided information!",
+        );
         return;
       }
     }
@@ -471,9 +614,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         language_code,
       });
 
-      let tasksMessage = `📝 ${
-        isRu ? "Задачи:\n" : "Tasks:\n"
-      }`;
+      let tasksMessage = `📝 ${isRu ? "Задачи:\n" : "Tasks:\n"}`;
       tasks.forEach((task) => {
         tasksMessage += `\n${task.title}\n${task.description}\n`;
       });
@@ -502,13 +643,23 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   const username = ctx.update && ctx.update.callback_query.from.username;
 
   if (callbackData.startsWith("create_profile")) {
-    await ctx.reply(isRu ? "Пожалуйста, укажите ваше место работы:" : "Please, specify your company name:", { reply_markup: { force_reply: true } });
-    return
+    await ctx.reply(
+      isRu
+        ? "Пожалуйста, укажите ваше место работы:"
+        : "Please, specify your company name:",
+      { reply_markup: { force_reply: true } },
+    );
+    return;
   }
 
   if (callbackData.startsWith("create_digital_avatar")) {
-    await ctx.reply(isRu ? "Пожалуйста, укажите ваше video_id:" : "Please, specify your video_id:", { reply_markup: { force_reply: true } });
-    return
+    await ctx.reply(
+      isRu
+        ? "Пожалуйста, укажите ваше video_id:"
+        : "Please, specify your video_id:",
+      { reply_markup: { force_reply: true } },
+    );
+    return;
   }
 
   const handleRoomSelection = async (
@@ -591,9 +742,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       }
     } catch (error) {
       const textError = `${
-        isRu
-          ? "Ошибка при выборе избушки"
-          : "Error selecting the room"
+        isRu ? "Ошибка при выборе избушки" : "Error selecting the room"
       }`;
       await ctx.reply(textError, error);
       throw new Error(textError);
@@ -614,9 +763,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   if (callbackData === "name_izbushka") {
     try {
       const textQuestion = `${
-        isRu
-          ? "Как назовем избушку?"
-          : "How do we name the room?"
+        isRu ? "Как назовем избушку?" : "How do we name the room?"
       }`;
       await ctx.reply(textQuestion, {
         reply_markup: {
@@ -718,10 +865,10 @@ await botAiKoshey.api.setMyCommands([
     command: "/start",
     description: "Start chatting with Ai Koshey",
   },
-  // {
-  //   command: "/room",
-  //   description: "Create a room",
-  // },
+  {
+    command: "/avatar",
+    description: "Create a digital avatar",
+  },
 ]);
 
 botAiKoshey.catch((err) => {

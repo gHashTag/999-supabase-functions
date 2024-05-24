@@ -127,6 +127,7 @@ export const matchEmbeddingIds = async (
   embeddingUser: unknown,
 ) => {
   try {
+    if(!supabaseInvoke) throw new Error('supabaseInvoke is null')
     const { data, error } = await supabaseInvoke
       .rpc("query_embeddings_tasks_with_ids", {
         id_array,
@@ -155,6 +156,7 @@ export const matchEmbedding = async (
   search_username: string,
 ) => {
   try {
+    if(!supabaseInvoke) throw new Error('supabaseInvoke is null')
     const { data, error } = await supabaseInvoke
       .rpc(rpc_function_name, {
         embedding_vector: JSON.stringify(embedding),

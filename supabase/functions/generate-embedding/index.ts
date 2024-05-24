@@ -1,7 +1,7 @@
 /// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
 
-import { createClient } from "npm:@supabase/supabase-js@2.42.0";
-import { Database, Tables } from "../_shared/database.types.ts";
+import {  Tables } from "../_shared/database.types.ts";
+import { supabase } from "../_shared/supabase/index.ts";
 
 type EmbeddingsRecord = Tables<"embeddings">;
 interface WebhookPayload {
@@ -11,11 +11,6 @@ interface WebhookPayload {
   schema: "public";
   old_record: null | EmbeddingsRecord;
 }
-
-const supabase = createClient<Database>(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
 
 const model = new Supabase.ai.Session("gte-small");
 

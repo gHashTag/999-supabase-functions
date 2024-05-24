@@ -13,11 +13,13 @@ export const client = () => {
     SUPABASE_URL ?? "",
     SUPABASE_ANON_KEY ?? "",
   );
-
   return supabaseClient;
 };
 
+
+
 export const supabase = client();
+
 
 export const clientInvokeLocal = () => {
   const supabaseClient: SupabaseClient = createClient(
@@ -39,7 +41,7 @@ export const clientInvokeProd = () => {
 
 export const supabaseInvokeProd= clientInvokeProd();
 
-export const supabaseLocal = clientInvokeLocal();
+export const supabaseLocal = LOCAL_SUPABASE_URL && LOCAL_SUPABASE_URL_ANON_KEY ? clientInvokeLocal() : null;
 
 export const supabaseInvoke = DEV ? supabaseLocal : supabaseInvokeProd;
 
