@@ -6,6 +6,7 @@ import {
   TUser,
   UserContext,
   UserData,
+  UserProfile,
 } from "../types/index.ts";
 import { supabase } from "./index.ts";
 
@@ -55,6 +56,64 @@ export async function createUser(
     return data;
   } catch (error) {
     throw new Error("Error createUser: " + error);
+  }
+}
+
+export async function updateUser(telegram_id: string, updates: any): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update(updates)
+      .eq("telegram_id", telegram_id)
+      .select("*"); // Добавлено .select("*")
+
+    if (error) {
+      throw new Error("Error updating user: " + error.message);
+    }
+
+    if (!data) {
+      throw new Error("No data returned from update");
+    }
+  } catch (error) {
+    throw new Error("Error updateUser: " + error);
+  }
+}
+
+export async function askNextQuestion(ctx: any, userId: string) {
+  const user = await getUser(userId);
+
+  if (user.company === null) {
+    await ctx.reply("Пожалуйста, укажите вашу компанию:");
+  } else if (user.position === null) {
+    await ctx.reply("Пожалуйста, укажите вашу должность:");
+  } else if (user.designation === null) {
+    await ctx.reply("Пожалуйста, укажите описание ваших навыков и интересов:");
+  } else {
+    await updateUser(userId, { is_question: false });
+    await ctx.reply("Ваш профиль заполнен!");
+  }
+}
+
+export async function updateUserProfile(profile: UserProfile): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        company: profile.company,
+        position: profile.position,
+        designation: `${profile.description}\n\n${profile.interests}`,
+      })
+      .eq("username", profile.username);
+
+    if (error) {
+      throw new Error("Error updating user profile: " + error.message);
+    }
+
+    if (!data) {
+      throw new Error("No data returned from update");
+    }
+  } catch (error) {
+    throw new Error("Error updateUserProfile: " + error);
   }
 }
 
@@ -132,6 +191,8 @@ interface UserWithFullName {
   position: string;
   designation: string;
   full_name: string;
+  iq_question: boolean;
+  company: string;
 }
 
 export const getUser = async (
@@ -152,6 +213,8 @@ export const getUser = async (
       position: response.data[0].position,
       designation: response.data[0].designation,
       full_name: `${response.data[0].first_name} ${response.data[0].last_name}`,
+      iq_question: response.data[0].iq_question,
+      company: response.data[0].company,
     };
   } catch (error) {
     throw new Error("Error getUser: " + error);

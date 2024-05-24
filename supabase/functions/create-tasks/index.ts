@@ -1,7 +1,6 @@
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
-import { client } from "../_shared/supabase/index.ts";
 import { Bot } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 import { translateText } from "../_shared/translateText.ts";
 
