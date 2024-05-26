@@ -52,6 +52,7 @@ export type CreateUserT = {
 };
 
 const startIzbushka = async (ctx: Context) => {
+  try {
   const isRu = ctx.from?.language_code === "ru";
   // const text = isRu
   //   ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
@@ -64,7 +65,10 @@ const startIzbushka = async (ctx: Context) => {
     },
   ];
 
-  const text = isRu ? `Начать встречу` : `Start the meet`;
+  const text = isRu 
+  ? `🤝 Начать встречу с тем, кто пригласил вас` 
+  : `🤝 Start the meeting with the person who invited you`;
+
   await ctx.reply(
     text,
     {
@@ -73,7 +77,10 @@ const startIzbushka = async (ctx: Context) => {
       },
     },
   );
-  return;
+    return;
+  } catch (error) {
+    throw new Error("startIzbushka", error)
+  }
 };
 
 const welcomeMenu = async (ctx: Context) => {
@@ -198,6 +205,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
             const last_name = message?.from?.last_name || "";
 
             if (username) {
+              await ctx.replyWithChatAction("typing");
               // Check if the user exists and create it if it doesn't
               const { isUserExist } = await checkAndReturnUser(
                 username,
@@ -222,10 +230,10 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                     telegram_id: message?.from?.id,
                     select_izbushka,
                   };
-
+                  await ctx.replyWithChatAction("typing");
                   await createUser(userObj);
-
-                  language_code && await welcomeMenu(ctx);
+                  await welcomeMenu(ctx);
+                  await startIzbushka(ctx);
                   return;
                 }
               } else {
@@ -233,6 +241,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                   username,
                 );
                 if (isUserExist) {
+                  await ctx.replyWithChatAction("typing");
                   const { izbushka } = await getSelectIzbushkaId(
                     select_izbushka,
                   );
@@ -270,7 +279,9 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                         select_izbushka,
                       );
                     }
-                    language_code && await startIzbushka(ctx);
+                   
+                    await startIzbushka(ctx);
+                    return
                   } else {
                     const textError = `${
                       isRu
@@ -282,7 +293,6 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                     );
                     throw new Error(textError);
                   }
-                  return;
                 }
               }
             }

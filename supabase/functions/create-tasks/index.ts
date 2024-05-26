@@ -55,11 +55,14 @@ async function sendTasksToTelegram({
     const assignee = username
       ? `${first_name} ${last_name || ""} (@${username})`
       : "";
+    console.log(assignee,'assignee')
     const bot = new Bot(token);
 
     await Promise.all(passports.map(async (passport) => {
+      console.log(passport,'passport')
       if (passport?.chat_id) {
         let success = false;
+        console.log(success,'success')
         while (!success) {
           try {
             await bot.api.sendMessage(
@@ -171,7 +174,7 @@ Deno.serve(async (req) => {
           workspace_id: data.workspace_id,
           user_id: data.user_id,
         };
-
+        console.log(roomAsset, "roomAsset");
         await setRoomAsset(roomAsset);
 
         const systemPrompt =
@@ -181,6 +184,7 @@ Deno.serve(async (req) => {
           transcription,
           systemPrompt,
         );
+        console.log(preparedTasks,'preparedTasks')
         if (!preparedTasks) throw new Error("preparedTasks is null");
 
         if (!data.room_id) throw new Error("room_id is null");
@@ -210,9 +214,10 @@ Deno.serve(async (req) => {
               description: "Capture the Universe and a couple of stars in the Aldebaran constellation"
           }]) Provide your response as a JSON object and always response on English`;
 
-        // console.log(preparedTasks, "preparedTasks");
+        console.log(preparedTasks, "preparedTasks");
         const tasks = await createChatCompletionJson(prompt);
         const tasksArray = tasks && JSON.parse(tasks).tasks;
+        console.log(tasksArray, "tasksArray");
 
         if (!Array.isArray(tasksArray)) {
           await bugCatcherRequest("create-tasks", "tasksArray is not array");
@@ -223,13 +228,14 @@ Deno.serve(async (req) => {
           ...task,
           user_id: task.user_id || "28772cec-eba4-4375-a5a1-090bba2909fa",
         }));
-
+        console.log(newTasks, "newTasks");
         const { roomData, isExistRoom } = await getRoomById(data?.room_id);
         if (!isExistRoom || !roomData) throw new Error("Room not found");
 
         const { language_code, id, token, description } = roomData;
 
         const workspace_id = description;
+        console.log(workspace_id,'workspace_id')
         if (!id) throw new Error("id is null");
         if (!workspace_id) throw new Error("workspace_id is null");
         if (!token) throw new Error("token is null");
@@ -246,6 +252,7 @@ Deno.serve(async (req) => {
         if (!room_id) throw new Error("room_id is null");
         if (!recording_id) throw new Error("recording_id is null");
         let translated_short = summary_short;
+        console.log(translated_short, "translated_short");
 
         if (language_code !== "en") {
           translated_short = await translateText(
@@ -270,6 +277,7 @@ Deno.serve(async (req) => {
             ...task,
             translated_text: `${task.title}\n${task.description}`,
           }));
+        console.log(translatedTasks, "translatedTasks");
 
         const passports = await getPassportByRoomId(room_id);
         console.log(passports, "passports");

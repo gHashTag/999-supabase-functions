@@ -76,7 +76,7 @@ export const logBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN_LOG");
 
 console.log(DEV,'DEV')
 export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
-console.log(botUsername, 'botUsername')
+
 
 const token = DEV ? tokenTest : tokenProd;
 
