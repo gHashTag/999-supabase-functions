@@ -75,7 +75,8 @@ export const supportChatId = Deno.env.get("SUPPORT_CHAT_ID");
 export const logBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN_LOG");
 
 console.log(DEV,'DEV')
-export const botUsername = DEV ? "dao999nft_dev_bot" : "ai_koshey_bot";
+const testBot = Deno.env.get("TEST_BOT");
+export const botUsername = DEV ? testBot : "ai_koshey_bot";
 console.log(botUsername, 'botUsername')
 
 const token = DEV ? tokenTest : tokenProd;
@@ -92,11 +93,16 @@ interface Message {
   user_id: string;
   session_id: string;
 }
+if (!token) throw new Error("Token Ai Koshy is not set");
+export const botAiKoshey = new Bot<AiKosheyContext>(token);
 
-export const botAiKoshey = new Bot<AiKosheyContext>(token || "");
+if (!logBotToken) throw new Error("Token Log Bot is not set");
+export const logBot = new Bot(logBotToken);
 
-export const logBot = new Bot(logBotToken || "");
-export const bugCatcherDevBot = new Bot(bugCatcherDevBotToken || "");
+if (!bugCatcherDevBotToken) throw new Error("Token Bug Catcher Dev Bot is not set");
+export const bugCatcherDevBot = new Bot(bugCatcherDevBotToken);
+
+if (!Deno.env.get("AI_BABA_YAGA_CHAT_ID")) throw new Error("AI_BABA_YAGA_CHAT_ID is not set");
 export const babaYagaChatId = Deno.env.get("AI_BABA_YAGA_CHAT_ID");
 
 export const bugCatcherRequest = async (title: string, error: any) => {
@@ -128,6 +134,7 @@ export const supportRequest = async (title: string, data: any) => {
 
 // handleUpdate
 export const handleUpdateAiKoshey = webhookCallback(botAiKoshey, "std/http");
+console.log(handleUpdateAiKoshey, "handleUpdateAiKoshey")
 
 export const handleUpdateJavaScript = webhookCallback(
   javaScriptDevBot,

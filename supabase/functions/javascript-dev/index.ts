@@ -7,7 +7,7 @@ import {
   updateProgress,
   updateResult,
 } from "../_shared/supabase/progress.ts";
-import { getUid, updateUser } from "../_shared/supabase/users.ts";
+import { getUid } from "../_shared/supabase/users.ts";
 import { pathIncrement } from "../path-increment.ts";
 
 import { checkSubscription } from "../check-subscription.ts";
@@ -82,56 +82,7 @@ javaScriptDevBot.command("start", async (ctx) => {
 javaScriptDevBot.on("message:text", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   console.log(ctx);
-  const isRu = ctx.from?.language_code === "ru";
   const query = ctx.message.text;
-
-  if (ctx?.message?.reply_to_message) {
-    const originalMessageText = ctx?.message?.reply_to_message?.text;
-
-    if (originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше video_id" : "Please, specify your video_id:")) {
-      await updateUser(ctx.from.id.toString(), { video_id: query })
-      await ctx.reply(isRu ? "Пожалуйста, укажите ваше audio_id:" : "Please, specify your audio_id:", {
-        reply_markup: { force_reply: true },
-      });
-      return;
-    }
-
-    if (originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше audio_id" : "Please, specify your audio_id:")) {
-      await updateUser(ctx.from.id.toString(), { audio_id: query })
-      await ctx.reply(isRu ? "Ваш Digital Avatar создан!" : "Your Digital Avatar is created!");
-      return;
-    }
-
-    if (originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше audio_id" : "Please, specify your audio_id:")) {
-      await updateUser(ctx.from.id.toString(), { audio_id: query })
-      await ctx.reply(isRu ? "Пожалуйста, укажите ваше video_id:" : "Please, specify your video_id:", {
-        reply_markup: { force_reply: true },
-      });
-      return;
-    }
-
-    if (originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваше место работы:" : "Please, specify your company name:")) {
-      await updateUser(ctx.from.id.toString(), { company: query })
-      await ctx.reply(isRu ? "Пожалуйста, укажите вашу должность:" : "Please, specify your designation:", {
-        reply_markup: { force_reply: true },
-      });
-      return;
-    }
-
-    if (originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите вашу должность:" : "Please, specify your designation:")) {
-      await updateUser(ctx.from.id.toString(), { position: query })
-      await ctx.reply(isRu ? "Пожалуйста, укажите ваши навыки и интересы:" : "Please, specify your skills and interests:", {
-        reply_markup: { force_reply: true },
-      });
-      return;
-    }
-
-    if (originalMessageText && originalMessageText.includes(isRu ? "Пожалуйста, укажите ваши навыки и интересы:" : "Please, specify your skills and interests:")) {
-      await updateUser(ctx.from.id.toString(), { designation: query })
-      await ctx.reply(isRu ? "Спасибо за предоставленную информацию!" : "Thank you for the provided information!");
-      return;
-    }
-  }
 
   try {
     const feedback = await getAiFeedbackFromSupabase({
@@ -156,11 +107,6 @@ javaScriptDevBot.on("callback_query:data", async (ctx) => {
   const isRu = ctx.from?.language_code === "ru";
 
   await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
-
-  if (callbackData.startsWith("create_profile")) {
-    await ctx.reply(isRu ? "Пожалуйста, укажите ваше место работы:" : "Please, specify your company name:", { reply_markup: { force_reply: true } });
-    return
-  }
 
   if (callbackData === "start_test") {
     try {
