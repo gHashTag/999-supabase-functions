@@ -362,6 +362,29 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   }
 });
 
+botAiKoshey.command("bots", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+
+  await ctx.reply(
+    isRu ? "Вот список всех наших ботов:" : "Here is the list of all our bots:",
+    {
+      reply_markup: {
+        inline_keyboard: [[
+    // { text: "Automatization", url: "https://t.me/bot1" },
+    { text: "TypeScript", url: "https://t.me/bot2" },
+    { text: "Python", url: "https://t.me/bot3" }],
+    [{ text: "React", url: "https://t.me/bot4" },
+    { text: "JavaScript", url: "https://t.me/bot5" },
+    // { text: "Tact", url: "https://t.me/bot6" },
+  ]
+  ],
+      },
+    }
+  );
+  return;
+});
+
 botAiKoshey.command("profile", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   const isRu = ctx.from?.language_code === "ru";
@@ -574,9 +597,10 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           console.log(user, "user");
           const newUser = await createUser(user);
           await ctx.replyWithChatAction("typing");
-          newUser && await ctx.reply(
-            intro({ language_code }),
+          newUser && await ctx.replyWithVideo(
+            "https://dmrooqbmxdhdyblqzswu.supabase.co/storage/v1/object/public/ai-koshey/999_final.mov?t=2024-05-25T13%3A16%3A58.420Z",
             {
+              caption: intro({ language_code }),
               reply_markup: {
                 inline_keyboard: menuButton({ language_code }),
               },
