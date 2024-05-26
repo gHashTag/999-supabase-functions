@@ -53,33 +53,33 @@ export type CreateUserT = {
 
 const startIzbushka = async (ctx: Context) => {
   try {
-  const isRu = ctx.from?.language_code === "ru";
-  // const text = isRu
-  //   ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
-  //   : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
+    const isRu = ctx.from?.language_code === "ru";
+    // const text = isRu
+    //   ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
+    //   : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
 
-  const buttons = [
-    {
-      text: `${isRu ? "Войти в Избушку" : "Enter the room"}`,
-      web_app: { url: "https://dao999nft.com/show-izbushka" },
-    },
-  ];
-
-  const text = isRu 
-  ? `🤝 Начать встречу с тем, кто пригласил вас` 
-  : `🤝 Start the meeting with the person who invited you`;
-
-  await ctx.reply(
-    text,
-    {
-      reply_markup: {
-        inline_keyboard: [buttons],
+    const buttons = [
+      {
+        text: `${isRu ? "Войти в Избушку" : "Enter the room"}`,
+        web_app: { url: "https://dao999nft.com/show-izbushka" },
       },
-    },
-  );
+    ];
+
+    const text = isRu
+      ? `🤝 Начать встречу с тем, кто пригласил вас`
+      : `🤝 Start the meeting with the person who invited you`;
+
+    await ctx.reply(
+      text,
+      {
+        reply_markup: {
+          inline_keyboard: [buttons],
+        },
+      },
+    );
     return;
   } catch (error) {
-    throw new Error("startIzbushka", error)
+    throw new Error("startIzbushka", error);
   }
 };
 
@@ -111,6 +111,19 @@ const welcomeMenu = async (ctx: Context) => {
       },
     },
   );
+
+  const videoUrl = "https://t.me/dao999nft_storage/2";
+
+  const videoResponse = await fetch(videoUrl);
+  if (!videoResponse.ok) {
+    const errorText = await videoResponse.text();
+    await bugCatcherRequest("sendVideo", `Failed to fetch video: ${errorText}`);
+    throw new Error(`Failed to fetch video: ${errorText}`);
+  }
+
+  if (!ctx.from) throw new Error("No user_id");
+  await botAiKoshey.api.sendVideo(ctx.from.id, videoUrl);
+  await botLinks(ctx, isRu);
   return;
 };
 
@@ -173,6 +186,49 @@ botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
       },
     },
   );
+  return;
+});
+
+const botLinks = async (ctx: Context, isRu: boolean) => {
+  await ctx.reply(
+    isRu
+      ? "Наши  боты по обучению искусственному интеллекту, JavaScript, TypeScript, React, Python, Tact, предоставляют уникальную возможность бесплатно заработать наш токен знаний $IGLA.\nВ отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь востребованным навыкам, которые могут значительно повысить вашу профессиональную ценность на рынке труда"
+      : "Our AI training bots, JavaScript, TypeScript, React, Python, Tact, provide a unique opportunity to earn our $IGLA knowledge token for free.\nUnlike other clickers, our bots allow users to spend time profitably learning in-demand skills who can significantly increase your professional value on the labor market",
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          // { text: "Automatization", url: "https://t.me/bot1" },
+          { text: "TypeScript", url: "https://t.me/typescript_dev_bot" },
+          { text: "Python", url: "https://t.me/python_ai_dev_bot" },
+        ], [{ text: "React", url: "https://t.me/react_native_dev_bot" }, {
+          text: "JavaScript",
+          url: "https://t.me/javascriptcamp_bot",
+        } // { text: "Tact", url: "https://t.me/bot6" },
+        ]],
+      },
+    },
+  );
+  return;
+};
+
+botAiKoshey.command("bots", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  botLinks(ctx, isRu);
+});
+
+botAiKoshey.command("profile", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+
+  await ctx.reply(isRu ? "Создать профиль" : "Create profile", {
+    reply_markup: {
+      inline_keyboard: [[{
+        text: isRu ? "Создать профиль" : "Create profile",
+        callback_data: "create_profile",
+      }]],
+    },
+  });
   return;
 });
 
@@ -279,9 +335,9 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                         select_izbushka,
                       );
                     }
-                   
+
                     await startIzbushka(ctx);
-                    return
+                    return;
                   } else {
                     const textError = `${
                       isRu
@@ -362,44 +418,6 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   }
 });
 
-botAiKoshey.command("bots", async (ctx) => {
-  await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
-
-  await ctx.reply(
-    isRu ? "Вот список всех наших ботов:" : "Here is the list of all our bots:",
-    {
-      reply_markup: {
-        inline_keyboard: [[
-    // { text: "Automatization", url: "https://t.me/bot1" },
-    { text: "TypeScript", url: "https://t.me/bot2" },
-    { text: "Python", url: "https://t.me/bot3" }],
-    [{ text: "React", url: "https://t.me/bot4" },
-    { text: "JavaScript", url: "https://t.me/bot5" },
-    // { text: "Tact", url: "https://t.me/bot6" },
-  ]
-  ],
-      },
-    }
-  );
-  return;
-});
-
-botAiKoshey.command("profile", async (ctx) => {
-  await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
-
-  await ctx.reply(isRu ? "Создать профиль" : "Create profile", {
-    reply_markup: {
-      inline_keyboard: [[{
-        text: isRu ? "Создать профиль" : "Create profile",
-        callback_data: "create_profile",
-      }]],
-    },
-  });
-  return;
-});
-
 botAiKoshey.command("digital_avatar", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   const isRu = ctx.from?.language_code === "ru";
@@ -435,30 +453,37 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
 
     if (ctx?.message?.reply_to_message) {
       const originalMessageText = ctx?.message?.reply_to_message?.text;
-      if (originalMessageText && originalMessageText.includes(isRu
-        ? "Пришли текст"
-        : "Send text",)) {
+      if (
+        originalMessageText &&
+        originalMessageText.includes(isRu ? "Пришли текст" : "Send text")
+      ) {
         const text = ctx?.message?.text || "";
-  
+
         if (!text && !message?.from?.id) throw new Error("No text or user_id");
         if (!username) throw new Error("No username");
-  
+
         const { user } = await checkAndReturnUser(
           username,
         );
-  
+
         if (!user) throw new Error("User not found");
-  
+
         await createVideo({
           avatar_id: user?.avatar_id,
           voice_id: user?.voice_id,
           text,
           user_id: user.user_id,
         });
-        await ctx.reply(`${language_code === "ru" ? "Ожидайте, скоро вам прийдет видео" : "Wait, your video is ready"}`);
+        await ctx.reply(
+          `${
+            language_code === "ru"
+              ? "Ожидайте, скоро вам прийдет видео"
+              : "Wait, your video is ready"
+          }`,
+        );
         return;
       }
-      
+
       if (
         ctx.from && originalMessageText && originalMessageText.includes(
           isRu
@@ -621,6 +646,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
               },
             },
           );
+          await botLinks(ctx, isRu);
           return;
         }
       } catch (error) {
@@ -881,7 +907,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       const textInvite = `${
         isRu
           ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.\n[Инструкция подключения](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
-          : `Invitation to the DAO 999 NFT\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the <b>Izbushka</b> button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
+          : `Invitation to the DAO 999 NFT\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the **Izbushka** button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
       }`;
 
       await ctx.reply(textInvite, { parse_mode: "Markdown" });

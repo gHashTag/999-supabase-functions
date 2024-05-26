@@ -7,3 +7,5 @@ supabase/.DS_Store
 
 supabase/functions/.DS_Store
 node_modules
+
+supabase/functions/_shared/.DS_Store
