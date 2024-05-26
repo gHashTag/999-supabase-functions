@@ -97,9 +97,9 @@ export async function getLastCallback(
 
 export async function getBiggest(
   { lesson_number, language }: getBiggestT,
-): Promise<string | null | Response> {
+): Promise<string | null> {
   try {
-    const { data, error }: SupabaseResponse<{ subtopic: string }> =
+    const { data, error } =
       await supabase
         .from(language)
         .select("subtopic")
@@ -107,12 +107,15 @@ export async function getBiggest(
         .order("subtopic", { ascending: false })
         .limit(1)
         .single();
-
+    console.log(data, "data getBiggest");
     if (error) {
       throw new Error("Error getBiggest: " + error.message);
     }
-
-    const result = data && data.length > 0 ? data[0].subtopic : null;
+    if (!data || !data.subtopic) {
+      throw new Error("Error getBiggest: data is null or subtopic is undefined");
+    }
+    const result = data.subtopic;
+    console.log(result, "result getBiggest");
     return result;
   } catch (error) {
     throw new Error("Error getBiggest: " + error);

@@ -14,15 +14,15 @@ export async function createUser(
   ctx: UserContext,
 ): Promise<UserData[] | Response | void> {
   try {
-    const { first_name, last_name, username, is_bot, language_code, id } =
-      ctx.update.message.from;
+    const { first_name, last_name, username, is_bot, language_code, telegram_id } =
+      ctx;
 
     const { data: existingUser, error } = await supabase
       .from("users")
       .select("*")
-      .eq("telegram_id", id)
+      .eq("telegram_id", telegram_id)
       .maybeSingle();
-
+      console.log(existingUser, "existingUser")
     if (error && error.message !== "No rows found") {
       throw new Error("Error checking user existence: " + error);
     }
@@ -38,7 +38,7 @@ export async function createUser(
       username,
       is_bot,
       language_code,
-      telegram_id: id,
+      telegram_id,
       email: "",
       photo_url: "",
     };
@@ -53,6 +53,7 @@ export async function createUser(
     if (data === null) {
       throw new Error("No data returned from insert");
     }
+    console.log(data, "data createUser")
     return data;
   } catch (error) {
     throw new Error("Error createUser: " + error);
@@ -300,21 +301,34 @@ export const checkUsernameCodes = async (
   username: string,
 ): Promise<CheckUsernameCodesResult> => {
   try {
+    console.log("🙋‍♂️checkUsernameCodes", username);
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("*")
       .eq("username", username);
+    console.log(userData, "userData");
 
+    if (userData && userData.length === 0) {
+      return {
+        isInviterExist: false,
+        invitation_codes: "",
+        error: true,
+        inviter_user_id: "",
+      };
+    }
+    
     const { data: rooms, error: roomsError } = await supabase
       .from("rooms")
       .select("*")
       .eq("username", username);
 
     if (roomsError) {
-      throw new Error("Error checkUsernameCodes: " + roomsError);
+      throw new Error("(314)Error checkUsernameCodes: " + roomsError);
     }
+    console.log(rooms, "rooms");
+    console.log(rooms[0]?.codes, "rooms[0]?.codes");
     const invitation_codes = rooms && rooms[0]?.codes;
-
+    console.log(invitation_codes, "invitation_codes");
     if (userError) {
       return {
         isInviterExist: false,
@@ -331,7 +345,7 @@ export const checkUsernameCodes = async (
       inviter_user_id: userData ? userData[0].user_id : "",
     };
   } catch (error) {
-    throw new Error("Error checkUsernameCodes: " + error);
+    throw new Error("(334)Error checkUsernameCodes: " + error);
   }
 };
 

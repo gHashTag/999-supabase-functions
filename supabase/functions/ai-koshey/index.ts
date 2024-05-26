@@ -19,6 +19,7 @@ import {
 import {
   checkAndReturnUser,
   checkUsernameCodes,
+  getUid,
   setSelectedIzbushka,
   updateUser,
 } from "../_shared/supabase/users.ts";
@@ -36,6 +37,8 @@ import {
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 import { createVideo } from "../_shared/heygen/index.ts";
+import { getBiggest, getCorrects, getLastCallback, getQuestion, resetProgress, updateProgress, updateResult } from "../_shared/supabase/progress.ts";
+import { pathIncrement } from "../path-increment.ts";
 
 export type CreateUserT = {
   id: number;
@@ -89,8 +92,8 @@ const textError = (ctx:Context) => {
   const isRu = ctx.from?.language_code === "ru";
   return `🔒 ${
     isRu
-    ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления."
-    : "Oh, my apologies! The word that came to me, the secret does not answer. Please, tell me another word that is the key to the right path, so that the path of your life is a strange and open way to the kingdom."
+    ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.\n\nЛибо вы можете попробовать пройти наш курс по нейросетям, использовав команду /course, и заработать наш токен $IGLA."
+    : "Oh, my apologies! The word that came to me, the secret does not answer. Please, tell me another word that is the key to the right path, so that the path of your life is a strange and open way to the kingdom.\n\nOr you can try to pass our course on the neural networks, using the command /course, and earn our token $IGLA."
 }`;
 }
 
@@ -124,7 +127,6 @@ const welcomeMenu = async (ctx: Context) => {
     },
   });
   
-  await botLinks(ctx, isRu);
   return;
 };
 
@@ -133,21 +135,20 @@ const welcomeMessage = async (ctx: Context) => {
   const text = isRu
     ? `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`
     : `🏰 Welcome, ${ctx?.update?.message?.from?.first_name}! \nThe all-powerful Babya Yaga, the ruler of secrets and charms, is preparing to confront you with the gates of the unknown world.\nTo save you from the front and not the back, remember to speak the word-a-word.`;
-  await ctx.reply(
-    text,
-    {
-      reply_markup: {
-        force_reply: true,
-      },
+
+  await ctx.replyWithVideo(videoUrl, {
+    caption: text,
+    reply_markup: {
+      force_reply: true,
     },
-  );
+  });
   return;
 };
 
 const intro = ({ language_code = "en" }: { language_code?: string }) => {
   const isRu = language_code === "ru";
   const intro = isRu
-    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. На лево пойдешь огонем согреешься, прямо пойдешь в водичке омолодишься, а на право пойдешь в медную трубу попадешь.`
+    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. На лево пойдешь огнем согреешься, прямо пойдешь в водичке омолодишься, а на право пойдешь в медную трубу попадешь.`
     : `🏰 The hut turned its front to you, and its back to the forest. If you go to the left you will be warmed by the fire, you will go straight ahead in the water and you will rejuvenate, and to the right you will go into a copper pipe.
 `;
   return intro;
@@ -173,6 +174,61 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
   ];
   return menuButton;
 };
+
+botAiKoshey.command("course", async (ctx) => {
+  console.log("course");
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  await ctx.reply(
+    isRu
+      ? `Чтобы начать тест, нажмите кнопку ниже!`
+      : `To start the test, click the button below!`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "Start test!", callback_data: "start_test" }],
+        ],
+      },
+    },
+  );
+});
+
+botAiKoshey.command("post", async (ctx) => {
+  const isRu = ctx.from?.language_code === "ru";
+  const chatId = "-1002228291515";
+  const message = `<b>Ай Кощей 🤖 Персональный нейронный ассистент</b>\n\nРешение для управления встречами и задачами в <b>Telegram</b>,  использует возможности искусственного интеллекта и блокчейн-технологий <b>TON (The Open Network)</b> для создания эффективной и прозрачной системы взаимодействия пользователей. \n\nЭто функция <b>"Бортовой журнал"</b> — первый шаг в создании персонального цифрового аватара. \n\nНаше видение заключается в создании умного помощника, который не только записывает и анализирует встречи, но и активно помогает в управлении задачами, делегировании и планировании не выходя из телеграм.`
+  const message_two = `🌟 Добро пожаловать в мир наших удивительных ботов по обучению искусственному интеллекту, <b>JavaScript, TypeScript, React, Python и Tact! 🤖💡</b>\n\n🔍 Наши боты предлагают уникальную возможность заработать наш токен знаний $IGLA, погружаясь в мир новых технологий и углубляясь в востребованные навыки. 🚀\n\n💼 В отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь навыкам, которые значительно повысят вашу профессиональную ценность на рынке труда.\n\n📚 Не упустите шанс улучшить свои знания и навыки, становясь более востребованным специалистом в сфере IT!\n\nПрисоединяйтесь к нам и начните свое преображение <b>прямо сейчас</b>!`
+  try {
+    await botAiKoshey.api.sendVideo(chatId, videoUrl, {
+      caption: message,
+      parse_mode: "HTML",
+    });
+    await botAiKoshey.api.sendMessage(chatId, message_two, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[
+          // { text: "Automatization", url: "https://t.me/bot1" },
+          { text: "TypeScript", url: "https://t.me/typescript_dev_bot" },
+          { text: "Python", url: "https://t.me/python_ai_dev_bot" },
+        ], [{ text: "React", url: "https://t.me/react_native_dev_bot" }, {
+          text: "JavaScript",
+          url: "https://t.me/javascriptcamp_bot",
+        } // { text: "Tact", url: "https://t.me/bot6" },
+        ],
+      [
+    {  
+        text: "Ai Koshey",
+        url: "https://t.me/ai_koshey_bot",
+      }
+      ]],
+      },
+    });
+    await ctx.reply(isRu ? "Сообщение с видео отправлено в канал." : "Message with video sent to the channel.");
+  } catch (error) {
+    console.error("Failed to send message with video to the channel:", error);
+    await ctx.reply(isRu ? "Не удалось отправить сообщение с видео в канал." : "Failed to send message with video to the channel.");
+  }
+});
 
 // Обработчик команды "avatar"
 botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
@@ -205,7 +261,13 @@ const botLinks = async (ctx: Context, isRu: boolean) => {
           text: "JavaScript",
           url: "https://t.me/javascriptcamp_bot",
         } // { text: "Tact", url: "https://t.me/bot6" },
-        ]],
+        ],
+      [
+    {  
+        text: "Ai Koshey",
+        callback_data: "start_test"
+      }
+      ]],
       },
     },
   );
@@ -247,6 +309,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
   if (params) {
     const underscoreIndex = params.indexOf("_"); // Search for the index of the first '_'
+
     if (underscoreIndex !== -1) {
       const select_izbushka = params.substring(0, underscoreIndex); // Extract the part before '_'
       const inviter = params.substring(underscoreIndex + 1); // Extract all after '_'
@@ -265,14 +328,14 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
             if (username) {
               await ctx.replyWithChatAction("typing");
               // Check if the user exists and create it if it doesn't
-              const { isUserExist } = await checkAndReturnUser(
+              const { isUserExist, user} = await checkAndReturnUser(
                 username,
               );
 
-              if (!isUserExist) {
+              if (!isUserExist || user?.inviter) {
                 if (
                   first_name && username &&
-                  message?.from?.id &&
+                  message?.from?.id && user?.inviter &&
                   message?.from?.language_code && message?.chat?.id
                 ) {
                   const userObj: CreateUserT = {
@@ -298,7 +361,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                 const { isUserExist, user } = await checkAndReturnUser(
                   username,
                 );
-                if (isUserExist) {
+                if (isUserExist && user?.inviter) {
                   await ctx.replyWithChatAction("typing");
                   const { izbushka } = await getSelectIzbushkaId(
                     select_izbushka,
@@ -371,8 +434,10 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
       } else {
         if (username) {
           // Check if the user exists and send the corresponding message
-          const { isUserExist } = await checkAndReturnUser(username);
-          if (isUserExist) {
+          const { isUserExist, user } = await checkAndReturnUser(username);
+          console.log(user, "user")
+          if (isUserExist && user?.inviter) {
+            console.log("440 sendMenu")
             language_code && await welcomeMenu(ctx);
           } else {
             language_code && await welcomeMessage(ctx);
@@ -392,11 +457,12 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   } else {
     if (username) {
       try {
-        const { isUserExist } = await checkAndReturnUser(
+        const { isUserExist, user } = await checkAndReturnUser(
           username,
         );
 
-        if (isUserExist) {
+        if (isUserExist && user?.inviter) {
+          console.log("465 sendMenu ", user.inviter)
           language_code && await welcomeMenu(ctx);
         } else {
           language_code && await welcomeMessage(ctx);
@@ -451,10 +517,11 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
   if (ctx?.message?.reply_to_message) {
     // Check if the original message text contains a specific text
     const query = ctx.message.text;
-    const originalMessageText = ctx?.message?.reply_to_message?.text;
+    const originalMessageText = ctx?.message?.reply_to_message?.caption ? ctx?.message?.reply_to_message?.caption : ctx?.message?.reply_to_message?.text;
 
     if (ctx?.message?.reply_to_message) {
-      const originalMessageText = ctx?.message?.reply_to_message?.text;
+      console.log(ctx)
+      const originalMessageText = ctx?.message?.reply_to_message?.caption ? ctx?.message?.reply_to_message?.caption : ctx?.message?.reply_to_message?.text;
       if (
         originalMessageText &&
         originalMessageText.includes(isRu ? "Пришли текст" : "Send text")
@@ -479,7 +546,7 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         await ctx.reply(
           `${
             language_code === "ru"
-              ? "Ожидайте, скоро вам прийдет видео"
+              ? "Ожидайте, скоро вам придет видео"
               : "Wait, your video is ready"
           }`,
         );
@@ -595,10 +662,11 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       }
     }
 
+    console.log(originalMessageText, "originalMessageText");
     if (
-      originalMessageText &&
+      originalMessageText || originalMessageText&&
       (originalMessageText.includes("🏰 Добро пожаловать") ||
-        originalMessageText.includes("🏰 Welcome") ||
+      originalMessageText.includes("🏰 Welcome") ||
         originalMessageText.includes("🔒 Oh, my apologies!") ||
         originalMessageText.includes("🔒 Ох, увы и ах!"))
     ) {
@@ -642,13 +710,11 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           return;
         } else {
 
-          await ctx.replyWithVideo(videoUrl, {
-            caption: textError(ctx),
+          await ctx.reply(textError(ctx), {
             reply_markup: {
               force_reply: true,
             },
           });
-          await botLinks(ctx, isRu);
           return;
         }
       } catch (error) {
@@ -703,6 +769,315 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   const callbackData = ctx.callbackQuery.data;
 
   const username = ctx.update && ctx.update.callback_query.from.username;
+
+  await ctx.replyWithChatAction("typing");
+  console.log(ctx);
+  const isHaveAnswer = callbackData.split("_").length === 4;
+
+  await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+
+  if (callbackData === "start_test") {
+    try {
+      await resetProgress({
+        username: ctx.callbackQuery.from.username || "",
+        language: "automation",
+      });
+      const questionContext = {
+        lesson_number: 1,
+        subtopic: 1,
+      };
+
+      const questions = await getQuestion({
+        ctx: questionContext,
+        language: "automation",
+      });
+      if (questions.length > 0) {
+        const {
+          topic: ruTopic,
+          image_lesson_url,
+          topic_en: enTopic,
+        } = questions[0];
+
+        const user_id = await getUid(ctx.callbackQuery.from.username || "");
+        if (!user_id) {
+          await ctx.reply("Пользователь не найден.");
+          return;
+        }
+        const topic = isRu ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+        // Формируем сообщение
+        const messageText =
+          `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
+
+        // Формируем кнопки
+        const inlineKeyboard = [
+          [{
+            text: "Перейти к вопросу",
+            callback_data: `automation_01_01`,
+          }],
+        ];
+
+        if (image_lesson_url) {
+          // Отправляем сообщение
+          await ctx.replyWithPhoto(image_lesson_url || "", {
+            caption: messageText,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        } else {
+          await ctx.reply(messageText, {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        }
+      } else {
+        await ctx.reply("Вопросы не найдены.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  if (!isHaveAnswer) {
+    try {
+      const [language, lesson, subtopic] = callbackData.split("_");
+      let questions;
+      if (!isNaN(Number(lesson)) && !isNaN(Number(subtopic))) {
+        // Значения корректны, вызываем функцию.
+        const getQuestionContext = {
+          lesson_number: Number(lesson),
+          subtopic: Number(subtopic),
+        };
+        questions = await getQuestion({
+          ctx: getQuestionContext,
+          language,
+        });
+      } else {
+        // Одно из значений некорректно, обрабатываем ошибку.
+        console.error(
+          "Одно из значений некорректно(96):",
+          lesson,
+          subtopic,
+          callbackData,
+        );
+        await ctx.reply(
+          isRu
+            ? "Одно из значений некорректно. Пожалуйста, проверьте данные."
+            : "One of the values is incorrect. Please check the data.",
+        );
+        return;
+      }
+      const {
+        question: ruQuestion,
+        variant_0: ruVariant_0,
+        variant_1: ruVariant_1,
+        variant_2: ruVariant_2,
+        question_en: enQuestion,
+        variant_0: enVariant_0,
+        variant_1: enVariant_1,
+        variant_2: enVariant_2,
+        id,
+        image_lesson_url,
+      } = questions[0];
+
+      const question = isRu ? ruQuestion : enQuestion;
+      const variant_0 = isRu ? ruVariant_0 : enVariant_0;
+      const variant_1 = isRu ? ruVariant_1 : enVariant_1;
+      const variant_2 = isRu ? ruVariant_2 : enVariant_2;
+
+      const user_id = await getUid(ctx.callbackQuery.from.username || "");
+      if (!user_id) {
+        await ctx.reply("Пользователь не найден.");
+        return;
+      }
+      console.log(user_id);
+      const allAnswers = await getCorrects({
+        user_id: user_id.toString(),
+        language: "all",
+      });
+      // Формируем сообщение
+      const messageText =
+        `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
+
+      // Формируем кнопки
+      const inlineKeyboard = [
+        [{
+          text: variant_0 || "Вариант 1",
+          callback_data: `${callbackData}_0`,
+        }],
+        [{
+          text: variant_1 || "Вариант 2",
+          callback_data: `${callbackData}_1`,
+        }],
+        [{
+          text: variant_2 || "Не знаю",
+          callback_data: `${callbackData}_2`,
+        }],
+      ];
+
+      if (image_lesson_url) {
+        // Отправляем сообщение
+        await ctx.editMessageCaption({
+          reply_markup: { inline_keyboard: inlineKeyboard },
+          caption: messageText,
+          parse_mode: "HTML",
+        });
+      } else {
+        await ctx.editMessageText(messageText, {
+          reply_markup: { inline_keyboard: inlineKeyboard },
+          parse_mode: "HTML",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  if (isHaveAnswer) {
+    try {
+      const [language, lesson_number, subtopic, answer] = callbackData.split(
+        "_",
+      );
+      const questionContext = {
+        lesson_number: Number(lesson_number),
+        subtopic: Number(subtopic),
+      };
+
+      const questions = await getQuestion({ ctx: questionContext, language });
+      if (questions.length > 0) {
+        const {
+          correct_option_id,
+        } = questions[0];
+
+        const user_id = await getUid(ctx.callbackQuery.from.username || "");
+        if (!user_id) {
+          await ctx.reply("Пользователь не найден.");
+          return;
+        }
+
+        const path = `${language}_${lesson_number}_${subtopic}`;
+        console.log(path, "path for getBiggest")
+        const biggestSubtopic = await getBiggest({
+          lesson_number: Number(lesson_number),
+          language,
+        });
+
+        let isTrueAnswer = null;
+        if (Number(correct_option_id) === Number(answer)) {
+          isTrueAnswer = true;
+          await ctx.reply("✅");
+        } else {
+          isTrueAnswer = false;
+          await ctx.reply("❌");
+        }
+        await updateProgress({
+          user_id: user_id.toString(),
+          isTrue: isTrueAnswer,
+          language,
+        });
+        console.log(biggestSubtopic, `biggestSubtopic`);
+        console.log(subtopic, `subtopic`);
+        const newPath = await pathIncrement({
+          path,
+          isSubtopic: Number(biggestSubtopic) === Number(subtopic) ? false : true,
+        });
+        const correctAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language,
+        });
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+
+        const lastCallbackId = await getLastCallback(language);
+        console.log(lastCallbackId);
+        if (lastCallbackId) {
+          if (questions[0].id === lastCallbackId) {
+            const correctProcent = (correctAnswers / lastCallbackId) * 100;
+            if (correctProcent >= 80) {
+              await updateResult({
+                user_id: user_id.toString(),
+                language,
+                value: true,
+              });
+              await ctx.reply(
+                isRu
+                  ? `<b>🥳 Поздравляем, вы прошли основной тест! Далее вы сможете пройти дополнительные тесты от искуственного интеллекта.</b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥳 Congratulations, you passed the main test! Then you can pass the additional tests from the artificial intelligence.</b>\n\n Total: ${allAnswers} $IGLA`,
+                { parse_mode: "HTML" },
+              );
+            } else {
+              await updateResult({
+                user_id: user_id.toString(),
+                language,
+                value: false,
+              });
+              await ctx.reply(
+                isRu
+                  ? `<b>🥲 Вы не прошли основной тест, но это не помешает вам развиваться! </b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥲 You didn't pass the main test, but that won't stop you from developing!</b>\n\n Total: ${allAnswers} $IGLA`,
+                { parse_mode: "HTML" },
+              );
+            }
+          }
+          console.log(newPath, `newPath ai koshey`);
+          const [newLanguage, newLesson, newSubtopic] = newPath.split("_");
+          const getQuestionContext = {
+            lesson_number: Number(newLesson),
+            subtopic: Number(newSubtopic),
+          };
+          const newQuestions = await getQuestion({
+            ctx: getQuestionContext,
+            language,
+          });
+          console.log(newQuestions, `newQuestions ai koshey for`);
+          console.log(getQuestionContext, `getQuestionContext`);
+          const { topic: ruTopic, image_lesson_url, topic_en: enTopic } =
+            newQuestions[0];
+          const topic = isRu ? ruTopic : enTopic;
+          // Формируем сообщение
+          const messageText =
+            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> Total: ${allAnswers} $IGLA</b>`;
+
+          // Формируем кнопки
+          const inlineKeyboard = [
+            [{
+              text: "Перейти к вопросу",
+              callback_data: newPath,
+            }],
+          ];
+          if (image_lesson_url) {
+            // Отправляем сообщение
+            await ctx.replyWithPhoto(image_lesson_url, {
+              caption: messageText,
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: inlineKeyboard },
+            });
+            return;
+          } else {
+            await ctx.reply(messageText, {
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: inlineKeyboard },
+            });
+            return;
+          }
+        } else {
+          await ctx.reply(isRu ? "Вопросы не найдены." : "No questions found.");
+        }
+      } else {
+        console.error("Invalid callback(289)");
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   if (callbackData.startsWith("create_profile")) {
     await ctx.reply(
@@ -930,6 +1305,10 @@ await botAiKoshey.api.setMyCommands([
   {
     command: "/avatar",
     description: "Create a digital avatar",
+  },
+  {
+    command: "/course",
+    description: "Start the course",
   },
 ]);
 

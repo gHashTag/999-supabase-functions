@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
 
         const newTasks = tasksArray.map((task: Task) => ({
           ...task,
-          user_id: task.user_id || "28772cec-eba4-4375-a5a1-090bba2909fa",
+          user_id: task.user_id || "e3939cb3-3198-4f52-8bfb-5728cc3dba84",
         }));
         console.log(newTasks, "newTasks");
         const { roomData, isExistRoom } = await getRoomById(data?.room_id);

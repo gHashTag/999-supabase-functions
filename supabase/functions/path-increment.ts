@@ -10,7 +10,10 @@ function pathIncrement(ctx: PathContext) {
   const parts = path.split("_");
   let major = parseInt(parts[1], 10);
   let minor = parseInt(parts[2], 10);
-
+  console.log(parts, "parts");
+  console.log(major, "major");
+  console.log(minor, "minor");
+  console.log(isSubtopic, "isSubtopic");
   // Инкрементируем соответствующую часть
   if (isSubtopic) {
     minor += 1;
@@ -23,6 +26,7 @@ function pathIncrement(ctx: PathContext) {
   const newPath = `${parts[0]}_${major.toString().padStart(2, "0")}_${
     minor.toString().padStart(2, "0")
   }`;
+  console.log(newPath, "newPath");
 
   return newPath;
 }

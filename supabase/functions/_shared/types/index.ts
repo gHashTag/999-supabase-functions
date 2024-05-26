@@ -29,48 +29,14 @@ export type SupabaseUser = TUser & {
 };
 
 export interface UserContext {
-  update: {
-    message: {
-      from: {
-        id: number;
         username: string;
         first_name: string;
         last_name?: string;
         is_bot: boolean;
         language_code: string;
-      };
-    };
-  };
-}
-
-export interface UserContext {
-  update: {
-    message: {
-      from: {
-        id: number;
-        username: string;
-        first_name: string;
-        last_name?: string;
-        is_bot: boolean;
-        language_code: string;
-      };
-    };
-  };
-}
-
-export interface UserContext {
-  update: {
-    message: {
-      from: {
-        id: number;
-        username: string;
-        first_name: string;
-        last_name?: string;
-        is_bot: boolean;
-        language_code: string;
-      };
-    };
-  };
+        chat_id: number
+        inviter: string
+        telegram_id: number
 }
 
 export interface UserData extends TUser {

@@ -7,7 +7,7 @@ import {
   updateProgress,
   updateResult,
 } from "../_shared/supabase/progress.ts";
-import { getUid } from "../_shared/supabase/users.ts";
+import { createUser, getUid } from "../_shared/supabase/users.ts";
 import { pathIncrement } from "../path-increment.ts";""
 
 import { checkSubscription } from "../check-subscription.ts";
@@ -17,7 +17,7 @@ import {
 } from "../_shared/telegram/bots.ts";
 import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
-import { createUser } from "../_shared/nextapi/index.ts";
+
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 import { Context } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
@@ -25,7 +25,7 @@ const videoUrl = "https://t.me/dao999nft_storage/2";
 
 pythonDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  await createUser({
+  const user = await createUser({
     username: ctx.from?.username || "",
     first_name: ctx.from?.first_name || "",
     last_name: ctx.from?.last_name || "",
@@ -35,6 +35,7 @@ pythonDevBot.command("start", async (ctx) => {
     telegram_id: ctx.from?.id || 0,
     inviter: "",
   });
+  console.log(user, "createUser")
   const isSubscription = await checkSubscription(
     ctx,
     ctx.from?.id || 0,
@@ -89,7 +90,7 @@ pythonDevBot.command("start", async (ctx) => {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "Subscribe", url: "https://t.me/ninenineninekingdom" }],
+          [{ text: isRu ? "Подписаться" : "Subscribe", url: "https://t.me/ai_koshey999nft" }],
         ],
       },
     });
@@ -359,7 +360,7 @@ pythonDevBot.on("callback_query:data", async (ctx) => {
         });
         const newPath = await pathIncrement({
           path,
-          isSubtopic: biggestSubtopic === subtopic ? false : true,
+          isSubtopic: Number(biggestSubtopic) === Number(subtopic) ? false : true,
         });
         const correctAnswers = await getCorrects({
           user_id: user_id.toString(),
