@@ -8,7 +8,7 @@ import {
   updateResult,
 } from "../_shared/supabase/progress.ts";
 import { getUid } from "../_shared/supabase/users.ts";
-import { pathIncrement } from "../path-increment.ts";
+import { pathIncrement } from "../path-increment.ts";""
 
 import { checkSubscription } from "../check-subscription.ts";
 import {
@@ -19,6 +19,9 @@ import { HttpError } from "https://deno.land/x/grammy@v1.22.4/mod.ts";
 import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
+import { Context } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
+
+const videoUrl = "https://t.me/dao999nft_storage/2";
 
 reactNativeDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
@@ -35,48 +38,91 @@ reactNativeDevBot.command("start", async (ctx) => {
   const isSubscription = await checkSubscription(
     ctx,
     ctx.from?.id || 0,
-    "-1001988802788",
+    "-1002228291515",
   );
+  console.log(isSubscription, "isSubscription")
   const isRu = ctx.from?.language_code === "ru";
 
   if (isSubscription === true) {
     await ctx.reply(
       isRu
-        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования React Native с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы React Native, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир ReactNative? \nНачать тест(кнопка)`
-        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn React Native programming language with artificial intelligence! Here you can not only learn the basics of React Native, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of ReactNative? \nStart Test(button)`,
+        ? `🚀 Привет, ${ctx.from?.first_name}! \nДобро пожаловать в твоего персонального помощника по изучению языка программирования React Native с помощью искусственного интеллекта! Здесь ты сможешь не только освоить основы React Native, но и изучить более сложные темы через интерактивное обучение и общение.\n\n🖥️ Я здесь, чтобы предложить тебе обзор тем начального уровня, помочь решить задачи и пройти тестирование, а также ответить на любые вопросы по ходу твоего обучения. Наше общение будет строиться на основе последних достижений в области искусственного интеллекта, что сделает твой учебный процесс еще более эффективным и увлекательным.\n\n💡 Готов начать увлекательное путешествие в мир React Native? \nНачать тест(кнопка)`
+        : `🚀 Hi, ${ctx.from?.first_name}! \nWelcome to your personal assistant to learn React Native programming language with artificial intelligence! Here you can not only learn the basics of React Native, but also explore more advanced topics through interactive learning and communication.\n\n🖥️ I'm here to offer you an overview of entry-level topics, help you solve problems and take tests, and answer any questions as you learn. Our communication will be based on the latest advances in artificial intelligence, making your learning experience even more effective and fun.\n\n\n💡 Ready to start your exciting journey into the world of React Native? \nStart Test(button)`,
       // ctx.t("startReactNative"),
       {
         reply_markup: {
           inline_keyboard: [
-            [{ text: "Начать тест!", callback_data: "start_test" }],
+            [{ text: isRu ? "Начать тест!" : "Start Test!", callback_data: "start_test" }],
           ],
         },
       },
     );
   } else if (isSubscription === false) {
+    // const messageText = isRu
+    //   ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
+    //   : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
+    // await ctx.replyWithPhoto(
+    //   isRu
+    //     ? "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ca0YPRgNGBINCQ0LLRgtC+0LzQsNGC0LjQt9Cw0YbQuNGP8J+kliBCb3RNb3RoZXJf0J/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40LUg0L/QvtC0INGA0YPQutC+0LLQvtC00YHRgtCy0L7QvCDQvdC10LnRgNC+0L3QvdGL0YUg0L/QvtC80L7RidC90LjQutC+0LIuINCS0Ysg0LjQt9GD0YfQuNGC0LUgSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwg0KLQsNGBdCwgR3JhcGhRTCwgQXBvbGxvINC4INC40L3RgtC10LPRgNCw0YbQuNGOINGBINCx0LvQvtC60YfQtdC50L3QvtC8IFRPTiDQuCBUZWxlZ3JhbSBNaW5pIEFwcF8xNzE0NzE1NDA4"
+    //     : "https://subscribebot.org/api/v1/snippet/subscription/25500?cache_key=OTkwMF9BdXRvbWF0aW9uIGNvdXJzZfCfpJYgQm90TW90aGVyX1dlIGludml0ZSB5b3UgdG8gZGl2ZSBpbnRvIHByb2dyYW1taW5nIHVuZGVyIHRoZSBndWlkYW5jZSBvZiBuZXVyYWwgYXNzaXN0YW50cy4gWW91IHdpbGwgbGVhcm4gSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwgVGHRgXQsIEdyYXBoUUwsIEFwb2xsbyBhbmQgaW50ZWdyYXRpb24gd2l0aCB0aGUgVE9OIGJsb2NrY2hhaW4gYW5kIFRlbGVncmFtIE1pbmkgQXBwXzE3MTQ3MTUzNjQ=",
+    //   {
+    //     caption: messageText,
+    //     parse_mode: "HTML",
+    //     reply_markup: {
+    //       inline_keyboard: [
+    //         [{
+    //           text: "Подписаться",
+    //           url: isRu
+    //             ? "https://t.me/tribute/app?startapp=s5bT"
+    //             : "https://t.me/tribute/app?startapp=s6Di",
+    //         }],
+    //       ],
+    //     },
+    //   },
+    // );
+    console.log("isSubscription false !!")
     const messageText = isRu
-      ? `<b>Курс Автоматизация🤖 BotMother</b>\nПрограммирование под руководством нейронных помощников. Вы изучите JavaScript, Python, TypeScript, React & React Native, Тасt, GraphQL, Apollo и интеграцию с блокчейном TON и Telegram Mini App`
-      : `<b>Automation Course🤖 BotMother</b>\nProgramming under the guidance of neural assistants. You will learn JavaScript, Python, TypeScript, React & React Native, TAST, GraphQL, Apollo and integration with the TON blockchain and Telegram Mini App`;
-    await ctx.replyWithPhoto(
-      isRu
-        ? "https://subscribebot.org/api/v1/snippet/subscription/19957?cache_key=OTk5OTAwX9Ca0YPRgNGBINCQ0LLRgtC+0LzQsNGC0LjQt9Cw0YbQuNGP8J+kliBCb3RNb3RoZXJf0J/RgNC+0LPRgNCw0LzQvNC40YDQvtCy0LDQvdC40LUg0L/QvtC0INGA0YPQutC+0LLQvtC00YHRgtCy0L7QvCDQvdC10LnRgNC+0L3QvdGL0YUg0L/QvtC80L7RidC90LjQutC+0LIuINCS0Ysg0LjQt9GD0YfQuNGC0LUgSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwg0KLQsNGBdCwgR3JhcGhRTCwgQXBvbGxvINC4INC40L3RgtC10LPRgNCw0YbQuNGOINGBINCx0LvQvtC60YfQtdC50L3QvtC8IFRPTiDQuCBUZWxlZ3JhbSBNaW5pIEFwcF8xNzE0NzE1NDA4"
-        : "https://subscribebot.org/api/v1/snippet/subscription/25500?cache_key=OTkwMF9BdXRvbWF0aW9uIGNvdXJzZfCfpJYgQm90TW90aGVyX1dlIGludml0ZSB5b3UgdG8gZGl2ZSBpbnRvIHByb2dyYW1taW5nIHVuZGVyIHRoZSBndWlkYW5jZSBvZiBuZXVyYWwgYXNzaXN0YW50cy4gWW91IHdpbGwgbGVhcm4gSmF2YVNjcmlwdCwgUHl0aG9uLCBUeXBlU2NyaXB0LCBSZWFjdCAmIFJlYWN0IE5hdGl2ZSwgVGHRgXQsIEdyYXBoUUwsIEFwb2xsbyBhbmQgaW50ZWdyYXRpb24gd2l0aCB0aGUgVE9OIGJsb2NrY2hhaW4gYW5kIFRlbGVncmFtIE1pbmkgQXBwXzE3MTQ3MTUzNjQ=",
-      {
-        caption: messageText,
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [
-            [{
-              text: "Подписаться",
-              url: isRu
-                ? "https://t.me/tribute/app?startapp=s5bT"
-                : "https://t.me/tribute/app?startapp=s6Di",
-            }],
-          ],
-        },
+    ? `Чтобы пользоваться нашими ботами, вы должны подписаться на нашу группу в Telegram.`
+    : `To use our bots, you must subscribe to our Telegram group.`;
+    await ctx.replyWithVideo(videoUrl, {
+      caption: messageText,
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "Subscribe", url: "https://t.me/ninenineninekingdom" }],
+        ],
       },
-    );
+    });
   }
+});
+
+const botLinks = async (ctx: Context, isRu: boolean) => {
+  await ctx.reply(
+    isRu
+      ? "Наши боты по обучению искусственному интеллекту, JavaScript, TypeScript, React, Python, Tact, предоставляют уникальную возможность бесплатно заработать наш токен знаний $IGLA.\nВ отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь востребованным навыкам, которые могут значительно повысить вашу профессиональную ценность на рынке труда"
+      : "Our AI training bots, JavaScript, TypeScript, React, Python, Tact, provide a unique opportunity to earn our $IGLA knowledge token for free.\nUnlike other clickers, our bots allow users to spend time profitably learning in-demand skills who can significantly increase your professional value on the labor market",
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          // { text: "Automatization", url: "https://t.me/bot1" },
+          { text: "TypeScript", url: "https://t.me/typescript_dev_bot" },
+          { text: "Python", url: "https://t.me/python_ai_dev_bot" },
+        ], [{ text: "React", url: "https://t.me/react_native_dev_bot" }, {
+          text: "JavaScript",
+          url: "https://t.me/javascriptcamp_bot",
+        } // { text: "Tact", url: "https://t.me/bot6" },
+        ]],
+      },
+    },
+  );
+  return;
+};
+
+reactNativeDevBot.command("bots", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  await botLinks(ctx, isRu);
+  return;
 });
 
 reactNativeDevBot.on("message:text", async (ctx) => {
@@ -107,6 +153,7 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
   const isRu = ctx.from?.language_code === "ru";
 
   await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+
   if (callbackData === "start_test") {
     try {
       await resetProgress({
@@ -336,8 +383,8 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
               });
               await ctx.reply(
                 isRu
-                  ? `<b>🥳 Поздравляем, вы прошли тест! </b>\n\n Total: ${allAnswers} $IGLA`
-                  : `<b>🥳 Congratulations, you passed the test!</b>\n\n Total: ${allAnswers} $IGLA`,
+                  ? `<b>🥳 Поздравляем, вы прошли основной тест! Далее вы сможете пройти дополнительные тесты от искуственного интеллекта.</b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥳 Congratulations, you passed the main test! Then you can pass the additional tests from the artificial intelligence.</b>\n\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             } else {
@@ -348,8 +395,8 @@ reactNativeDevBot.on("callback_query:data", async (ctx) => {
               });
               await ctx.reply(
                 isRu
-                  ? `<b>🥲 Вы не прошли тест, но это не помешает вам развиваться! </b>\n\n Total: ${allAnswers} $IGLA`
-                  : `<b>🥲 You didn't pass the test, but that won't stop you from developing!</b>\n\n Total: ${allAnswers} $IGLA`,
+                  ? `<b>🥲 Вы не прошли основной тест, но это не помешает вам развиваться! </b>\n\n Total: ${allAnswers} $IGLA`
+                  : `<b>🥲 You didn't pass the main test, but that won't stop you from developing!</b>\n\n Total: ${allAnswers} $IGLA`,
                 { parse_mode: "HTML" },
               );
             }

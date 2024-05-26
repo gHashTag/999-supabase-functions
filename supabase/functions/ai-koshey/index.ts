@@ -51,6 +51,8 @@ export type CreateUserT = {
   select_izbushka: string;
 };
 
+const videoUrl = "https://t.me/dao999nft_storage/2";
+
 const startIzbushka = async (ctx: Context) => {
   try {
     const isRu = ctx.from?.language_code === "ru";
@@ -83,46 +85,45 @@ const startIzbushka = async (ctx: Context) => {
   }
 };
 
-const welcomeMenu = async (ctx: Context) => {
+const textError = (ctx:Context) => {
   const isRu = ctx.from?.language_code === "ru";
+  return `🔒 ${
+    isRu
+    ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления."
+    : "Oh, my apologies! The word that came to me, the secret does not answer. Please, tell me another word that is the key to the right path, so that the path of your life is a strange and open way to the kingdom."
+}`;
+}
+
+const welcomeMenu = async (ctx: Context) => {
+  await ctx.replyWithChatAction("upload_video"); // Отправка действия загрузки видео в чате
+  const isRu = ctx.from?.language_code === "ru";
+
   const text = isRu
-    ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`
-    : `🏰 The hut turned its front to you, and its back to the forest. If you go to the left you will be warmed by the fire, you will go straight ahead in the water and you will rejuvenate, and to the right you will go into a copper pipe.`;
-  await ctx.reply(
-    text,
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: `🔥 ${isRu ? "Огонь" : "Fire"}`,
-              callback_data: "fire",
-            },
-            {
-              text: `💧 ${isRu ? "Вода" : "Water"}`,
-              callback_data: "water",
-            },
-            {
-              text: `🎺 ${isRu ? "Медные трубы" : "Copper pipes"}`,
-              callback_data: "copper_pipes",
-            },
-          ],
+  ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`
+  : `🏰 The hut turned its front to you, and its back to the forest. If you go to the left you will be warmed by the fire, you will go straight ahead in the water and you will rejuvenate, and to the right you will go into a copper pipe.`;
+
+  await ctx.replyWithVideo(videoUrl, {
+    caption: text,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `🔥 ${isRu ? "Огонь" : "Fire"}`,
+            callback_data: "fire",
+          },
+          {
+            text: `💧 ${isRu ? "Вода" : "Water"}`,
+            callback_data: "water",
+          },
+          {
+            text: `🎺 ${isRu ? "Медные трубы" : "Copper pipes"}`,
+            callback_data: "copper_pipes",
+          },
         ],
-      },
+      ],
     },
-  );
-
-  const videoUrl = "https://t.me/dao999nft_storage/2";
-
-  const videoResponse = await fetch(videoUrl);
-  if (!videoResponse.ok) {
-    const errorText = await videoResponse.text();
-    await bugCatcherRequest("sendVideo", `Failed to fetch video: ${errorText}`);
-    throw new Error(`Failed to fetch video: ${errorText}`);
-  }
-
-  if (!ctx.from) throw new Error("No user_id");
-  await botAiKoshey.api.sendVideo(ctx.from.id, videoUrl);
+  });
+  
   await botLinks(ctx, isRu);
   return;
 };
@@ -192,7 +193,7 @@ botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
 const botLinks = async (ctx: Context, isRu: boolean) => {
   await ctx.reply(
     isRu
-      ? "Наши  боты по обучению искусственному интеллекту, JavaScript, TypeScript, React, Python, Tact, предоставляют уникальную возможность бесплатно заработать наш токен знаний $IGLA.\nВ отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь востребованным навыкам, которые могут значительно повысить вашу профессиональную ценность на рынке труда"
+      ? "Наши боты по обучению искусственному интеллекту, JavaScript, TypeScript, React, Python, Tact, предоставляют уникальную возможность бесплатно заработать наш токен знаний $IGLA.\nВ отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь востребованным навыкам, которые могут значительно повысить вашу профессиональную ценность на рынке труда"
       : "Our AI training bots, JavaScript, TypeScript, React, Python, Tact, provide a unique opportunity to earn our $IGLA knowledge token for free.\nUnlike other clickers, our bots allow users to spend time profitably learning in-demand skills who can significantly increase your professional value on the labor market",
     {
       reply_markup: {
@@ -214,7 +215,8 @@ const botLinks = async (ctx: Context, isRu: boolean) => {
 botAiKoshey.command("bots", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   const isRu = ctx.from?.language_code === "ru";
-  botLinks(ctx, isRu);
+  await botLinks(ctx, isRu);
+  return;
 });
 
 botAiKoshey.command("profile", async (ctx) => {
@@ -622,30 +624,30 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           console.log(user, "user");
           const newUser = await createUser(user);
           await ctx.replyWithChatAction("typing");
-          newUser && await ctx.replyWithVideo(
-            "https://dmrooqbmxdhdyblqzswu.supabase.co/storage/v1/object/public/ai-koshey/999_final.mov?t=2024-05-25T13%3A16%3A58.420Z",
-            {
-              caption: intro({ language_code }),
-              reply_markup: {
-                inline_keyboard: menuButton({ language_code }),
-              },
+
+          const videoResponse = await fetch(videoUrl);
+          if (!videoResponse.ok) {
+            const errorText = await videoResponse.text();
+            await bugCatcherRequest("sendVideo", `Failed to fetch video: ${errorText}`);
+            throw new Error(`Failed to fetch video: ${errorText}`);
+          }
+
+          newUser && await ctx.replyWithVideo(videoUrl, {
+            caption: intro({ language_code }),
+            reply_markup: {
+              inline_keyboard: menuButton({ language_code }),
             },
-          );
+          });
+          await botLinks(ctx, isRu);
           return;
         } else {
-          const textError = `🔒 ${
-            isRu
-              ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления."
-              : "Oh, my apologies! The word that came to me, the secret does not answer. Please, tell me another word that is the key to the right path, so that the path of your life is a strange and open way to the kingdom."
-          }`;
-          await ctx.reply(
-            textError,
-            {
-              reply_markup: {
-                force_reply: true,
-              },
+
+          await ctx.replyWithVideo(videoUrl, {
+            caption: textError(ctx),
+            reply_markup: {
+              force_reply: true,
             },
-          );
+          });
           await botLinks(ctx, isRu);
           return;
         }
