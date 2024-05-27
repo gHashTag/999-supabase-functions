@@ -1,7 +1,7 @@
-import { model_ai } from "../constants.ts";
+import { XI_API_KEY, model_ai } from "../constants.ts";
 import { openai } from "../openai/client.ts";
 import GPT3Tokenizer from "https://esm.sh/gpt3-tokenizer@1.1.5";
-import { getAiFeedbackT, getAiSupabaseFeedbackT } from "../types/index.ts";
+import { createVoiceT, getAiFeedbackT, getAiSupabaseFeedbackT } from "../types/index.ts";
 import { supabase, supabaseInvoke } from "./index.ts";
 
 export const tokenizer = new GPT3Tokenizer({ type: "gpt3" });
@@ -176,5 +176,121 @@ export const matchEmbedding = async (
     return data;
   } catch (error) {
     throw new Error(`Error matching embedding: ${error}`);
+  }
+};
+
+export async function createVoice({file, telegram_id}: createVoiceT): Promise<string | null> {
+  const url = "https://api.elevenlabs.io/v1/voices/add";
+  const formData = new FormData();
+  formData.append("files", file, "voice.ogg");
+  formData.append("name", `voice tg_id: ${telegram_id}`);
+  formData.append("description", `Voice created from Telegram voice message`);
+
+  try {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "xi-api-key": XI_API_KEY as string,
+    },
+    body: formData,
+  });
+
+  if (response.ok) {
+    const result = await response.json();
+    return result.voice_id;
+  } else {
+    console.error(`Error: ${response.status} ${response.statusText}`);
+    return null;
+  }
+} catch (error) {
+  console.error(error);
+  return null;
+}
+}
+
+export const deleteVoice = async (voiceId: string) => {
+  const XI_API_KEY = Deno.env.get("XI_API_KEY");
+
+  const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
+    method: "DELETE",
+    headers: {
+      "xi-api-key": XI_API_KEY as string,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete voice: ${response.statusText}`);
+  }
+
+  return await response.json();
+};
+
+export const getVoiceId = async (telegramId: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('voice_id_elevenlabs')
+    .eq('telegram_id', telegramId)
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to fetch voice_id_elevenlabs: ${error.message}`);
+  }
+
+  return data.voice_id_elevenlabs;
+};
+
+export const createVoiceMessage = async (text: string, voiceId: string, botToken: string, chatId: string) => {
+  console.log(text, "text createVoiceMessage");
+  console.log(voiceId, "voiceId createVoiceMessage");
+
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'xi-api-key': 'abe4d0befe21e3503beacd6b1d3db47d',
+    },
+    body: JSON.stringify({
+      text,
+      voice_settings: {
+        stability: 1,
+        similarity_boost: 1,
+      },
+    }),
+  };
+
+  try {
+    const response = await fetch(url, options);
+    console.log("response createVoiceMessage", response);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create voice message: ${response.statusText} - ${errorText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('audio', new Blob([buffer], { type: 'audio/mpeg' }), 'voice_message.mp3');
+
+    const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendAudio`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const telegramData = await telegramResponse.json();
+    console.log("telegramData", telegramData);
+
+    if (!telegramResponse.ok) {
+      const errorText = await telegramResponse.text();
+      throw new Error(`Failed to send audio message: ${telegramResponse.statusText} - ${errorText}`);
+    }
+
+    return telegramData;
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
 };

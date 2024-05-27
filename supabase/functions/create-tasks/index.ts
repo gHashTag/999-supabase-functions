@@ -122,8 +122,6 @@ Deno.serve(async (req) => {
   console.log(type, "type");
 
   try {
-    if (type === "transcription.success") {
-      await supportRequest("transcription.success", data);
 
       const recording_id = data.recording_id;
       if (!recording_id) throw new Error("recording_id is null");
@@ -283,6 +281,14 @@ Deno.serve(async (req) => {
         console.log(passports, "passports");
         if (!passports) throw new Error("passports is null");
 
+        if (type === "transcription.success") {
+          await supportRequest(
+            `transcription.success,\nrecording_id: ${data.recording_id},\nroom_id: ${data.room_id},\ntranscript_txt_presigned_url: ${data.transcript_txt_presigned_url},\nsummary_json_presigned_url: ${data.summary_json_presigned_url}`, 
+            {
+              username: passports[0].username
+            },
+          );
+          
         for (const passport of passports) {
           const summary_short_url =
             `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;

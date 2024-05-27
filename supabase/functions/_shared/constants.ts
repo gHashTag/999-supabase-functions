@@ -27,11 +27,14 @@ if (!Deno.env.get("LOCAL_SUPABASE_URL")) {
   throw new Error("LOCAL_SUPABASE_URL is not set");
 }
 
+if (!Deno.env.get("XI_API_KEY")) throw new Error("XI_API_KEY is not defined");
+
 export const DEV = Deno.env.get("DEV") === "true" ? true : false;
 
 export const HEYGEN_URL = Deno.env.get("HEYGEN_URL");
 export const API_KEY = Deno.env.get("API_KEY");
-
+export const XI_API_KEY = Deno.env.get("XI_API_KEY")
+export const AI_KOSHEY = DEV ? Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY_TEST") : Deno.env.get("TELEGRAM_BOT_TOKEN_AI_KOSHEY")
 // local
 export const LOCAL_SUPABASE_URL = Deno.env.get("LOCAL_SUPABASE_URL");
 export const LOCAL_SUPABASE_URL_ANON_KEY = Deno.env.get(

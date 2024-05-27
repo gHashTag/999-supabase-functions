@@ -7,7 +7,7 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-import { delay } from "../_shared/constants.ts";
+import { AI_KOSHEY, delay } from "../_shared/constants.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import {
   AiKosheyContext,
@@ -35,10 +35,11 @@ import {
   setPassport,
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
-import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
+import { getAiFeedbackFromSupabase, createVoice, createVoiceMessage } from "../_shared/supabase/ai.ts";
 import { createVideo } from "../_shared/heygen/index.ts";
 import { getBiggest, getCorrects, getLastCallback, getQuestion, resetProgress, updateProgress, updateResult } from "../_shared/supabase/progress.ts";
 import { pathIncrement } from "../path-increment.ts";
+import { deleteVoice, getVoiceId } from "../_shared/supabase/ai.ts";
 
 export type CreateUserT = {
   id: number;
@@ -198,6 +199,16 @@ botAiKoshey.command("post", async (ctx) => {
   const chatId = "-1002228291515";
   const message = `<b>Ай Кощей 🤖 Персональный нейронный ассистент</b>\n\nРешение для управления встречами и задачами в <b>Telegram</b>,  использует возможности искусственного интеллекта и блокчейн-технологий <b>TON (The Open Network)</b> для создания эффективной и прозрачной системы взаимодействия пользователей. \n\nЭто функция <b>"Бортовой журнал"</b> — первый шаг в создании персонального цифрового аватара. \n\nНаше видение заключается в создании умного помощника, который не только записывает и анализирует встречи, но и активно помогает в управлении задачами, делегировании и планировании не выходя из телеграм.`
   const message_two = `🌟 Добро пожаловать в мир наших удивительных ботов по обучению искусственному интеллекту, <b>JavaScript, TypeScript, React, Python и Tact! 🤖💡</b>\n\n🔍 Наши боты предлагают уникальную возможность заработать наш токен знаний $IGLA, погружаясь в мир новых технологий и углубляясь в востребованные навыки. 🚀\n\n💼 В отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь навыкам, которые значительно повысят вашу профессиональную ценность на рынке труда.\n\n📚 Не упустите шанс улучшить свои знания и навыки, становясь более востребованным специалистом в сфере IT!\n\nПрисоединяйтесь к нам и начните свое преображение <b>прямо сейчас</b>!`
+  const telegram_id = ctx.from?.id;
+  if (!telegram_id) throw new Error("No telegram id");
+  const chatMember = await botAiKoshey.api.getChatMember(chatId, telegram_id);
+  const isAdmin = chatMember.status === 'administrator' || chatMember.status === 'creator';
+  if (!isAdmin) {
+    await ctx.reply(isRu ? "У вас нет прав администратора для выполнения этого действия." : "You do not have admin rights to perform this action.");
+    return;
+  }
+
+
   try {
     await botAiKoshey.api.sendVideo(chatId, videoUrl, {
       caption: message,
@@ -504,6 +515,92 @@ botAiKoshey.command("digital_avatar", async (ctx) => {
   return;
 });
 
+botAiKoshey.command("text_to_speech", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+
+  const text = isRu
+    ? "🔮 Пожалуйста, отправьте текст, который вы хотите преобразовать в голосовое сообщение."
+    : "🔮 Please send the text you want to convert to a voice message.";
+
+  await ctx.reply(text, {
+    reply_markup: {
+      force_reply: true,
+    },
+  });
+  return;
+});
+
+botAiKoshey.command("reset_voice", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  const telegram_id = ctx.from?.id.toString();
+
+   const text = isRu
+      ? "🔮 О, добрый молодец! Голос твоего цифрового аватара был успешно сброшен, и теперь ты можешь создать новый."
+      : "🔮 Oh, noble traveler! The voice of your digital avatar has been successfully reset, and now you can create a new one.";
+  try {
+    // Сбрасываем голос цифрового аватара
+    if (!telegram_id) throw new Error("No telegram_id")
+    await updateUser(telegram_id, { voice_id_elevenlabs: null });
+  const voice_id_elevenlabs = await getVoiceId(telegram_id)
+  await deleteVoice(voice_id_elevenlabs)
+    await ctx.reply(text);
+  } catch (error) {
+    await ctx.reply(
+      isRu
+        ? "🤔 Ошибка при сбросе голоса цифрового аватара."
+        : "🤔 Error resetting digital avatar voice."
+    );
+    await bugCatcherRequest(
+      "ai_koshey_bot (reset_voice)",
+      JSON.stringify(error),
+    );
+    throw new Error("Error resetting digital avatar voice.");
+  }
+});
+
+botAiKoshey.command("voice", async (ctx) => {
+  console.log("voice")
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  const text = isRu
+    ? "🔮 О, добрый молодец! Пошли мне свой голос, и я, волшебным образом, буду говорить с тобой твоим собственным голосом, словно из сказки."
+    : "🔮 Please send me a voice message, and I will use it to create a voice avatar that speaks in your own voice.";
+
+  ctx.reply(text)
+})
+botAiKoshey.on("message:voice", async (ctx) => {
+  const voice = ctx.msg.voice;
+  const fileId = voice.file_id;
+
+  // Получаем файл голосового сообщения
+  const file = await ctx.api.getFile(fileId);
+  const filePath = file.file_path;
+  const fileUrl = `https://api.telegram.org/file/bot${AI_KOSHEY}/${filePath}`;
+
+  console.log(fileUrl, "fileUrl")
+  // Скачиваем файл
+  const response = await fetch(fileUrl);
+  const buffer = await response.arrayBuffer();
+  const fileBlob = new Blob([buffer]);
+
+  console.log(fileBlob, "fileBlob")
+  // Отправляем файл в ElevenLabs для создания нового голоса
+  const voiceId = await createVoice({file: fileBlob, telegram_id: ctx.from?.id.toString()});
+  if (!ctx.from?.username) throw new Error("No username")
+
+  const telegram_id = ctx.from?.id.toString()
+
+  console.log(voiceId, "voiceId")
+  if (voiceId) {
+    await ctx.reply(`Голос успешно создан! Voice ID: ${voiceId}`);
+    await updateUser(telegram_id, {voice_id_elevenlabs: voiceId})
+  } else {
+    await ctx.reply("Ошибка при создании голоса.");
+  }
+});
+
 botAiKoshey.on("message:text", async (ctx: Context) => {
   await ctx.replyWithChatAction("typing");
   const inviter = ctx?.message?.text;
@@ -519,6 +616,21 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
     const query = ctx.message.text;
     const originalMessageText = ctx?.message?.reply_to_message?.caption ? ctx?.message?.reply_to_message?.caption : ctx?.message?.reply_to_message?.text;
 
+    if (originalMessageText?.includes("🔮 Пожалуйста, отправьте текст, который вы хотите преобразовать в голосовое сообщение.")
+    || originalMessageText?.includes("🔮 Please send the text you want to convert to a voice message."))
+  {
+    // await ctx.replyWithChatAction("record_voice");
+    // const telegram_id = ctx.from?.id.toString()
+    // const botToken = AI_KOSHEY as string
+    // if (!telegram_id) throw new Error("No telegram_id")
+    // const voice_id_elevenlabs = await getVoiceId(telegram_id)
+    // if (!voice_id_elevenlabs) throw new Error("No voice_id_elevenlabs")
+    // if (!query) throw new Error("No query")
+    // const audio_url = await createVoiceMessage(query, voice_id_elevenlabs, telegram_id, botToken)
+    // console.log(audio_url)
+    ctx.reply("test")
+    return
+  }
     if (ctx?.message?.reply_to_message) {
       console.log(ctx)
       const originalMessageText = ctx?.message?.reply_to_message?.caption ? ctx?.message?.reply_to_message?.caption : ctx?.message?.reply_to_message?.text;
@@ -1309,6 +1421,18 @@ await botAiKoshey.api.setMyCommands([
   {
     command: "/course",
     description: "Start the course",
+  },
+  {
+    command: "/text_to_speech",
+    description: "Convert text to speech",
+  },
+  {
+    command: "/voice",
+    description: "Create voice ai-avatar",
+  },
+  {
+    command: "/reset_voice",
+    description: "Reset voice ai-avatar",
   },
 ]);
 
