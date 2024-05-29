@@ -55,18 +55,16 @@ async function sendTasksToTelegram({
     const assignee = username
       ? `${first_name} ${last_name || ""} (@${username})`
       : "";
-    console.log(assignee,'assignee')
+
     const bot = new Bot(token);
 
     await Promise.all(passports.map(async (passport) => {
-      console.log(passport,'passport')
-      if (passport?.chat_id) {
+      if (passport?.rooms?.chat_id) {
         let success = false;
-        console.log(success,'success')
         while (!success) {
           try {
             await bot.api.sendMessage(
-              passport.chat_id,
+              Number(passport.rooms.chat_id),
               `${translated_text}\n${assignee}`,
             );
             success = true;
@@ -182,7 +180,7 @@ Deno.serve(async (req) => {
           transcription,
           systemPrompt,
         );
-        console.log(preparedTasks,'preparedTasks')
+        console.log(preparedTasks, "preparedTasks");
         if (!preparedTasks) throw new Error("preparedTasks is null");
 
         if (!data.room_id) throw new Error("room_id is null");
@@ -233,7 +231,7 @@ Deno.serve(async (req) => {
         const { language_code, id, token, description } = roomData;
 
         const workspace_id = description;
-        console.log(workspace_id,'workspace_id')
+        console.log(workspace_id, "workspace_id");
         if (!id) throw new Error("id is null");
         if (!workspace_id) throw new Error("workspace_id is null");
         if (!token) throw new Error("token is null");
@@ -306,7 +304,7 @@ Deno.serve(async (req) => {
           ];
 
           await bot.api.sendMessage(
-            passport.chat_id,
+            Number(passport.rooms.chat_id),
             `🚀 ${translated_short}`,
             {
               reply_markup: {
