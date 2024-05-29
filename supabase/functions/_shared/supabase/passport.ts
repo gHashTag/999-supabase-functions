@@ -148,11 +148,17 @@ export async function getPassportByRoomId(
   room_id: string,
 ): Promise<PassportUser[]> {
   try {
-    const { data, error } = await supabase.from("user_passport")
-      .select("*")
+    const { data, error } = await supabase
+      .from("user_passport")
+      .select(`
+      *,
+      rooms(chat_id)
+    `)
       .eq("room_id", room_id)
       .eq("type", "room")
       .eq("is_owner", true);
+    
+    console.log(data, "data");
 
     if (error) {
       await bugCatcherRequest("getPassportByRoomId", error);

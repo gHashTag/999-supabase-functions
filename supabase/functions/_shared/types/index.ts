@@ -110,6 +110,7 @@ export interface PassportUser {
   type: "room";
   is_owner: boolean;
   photo_url: string | null;
+  rooms: { chat_id: string };
 }
 
 export interface RoomNode {
