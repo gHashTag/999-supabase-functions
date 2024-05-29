@@ -1307,6 +1307,10 @@ await botAiKoshey.api.setMyCommands([
     description: "Create a digital avatar",
   },
   {
+    command: "/bots",
+    description: "Our Bots",
+  },
+  {
     command: "/course",
     description: "Start the course",
   },
