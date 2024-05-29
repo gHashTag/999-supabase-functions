@@ -98,6 +98,7 @@ const textError = (ctx:Context) => {
 }
 
 const welcomeMenu = async (ctx: Context) => {
+  console.log("✅welcomeMenu")
   await ctx.replyWithChatAction("upload_video"); // Отправка действия загрузки видео в чате
   const isRu = ctx.from?.language_code === "ru";
 
@@ -332,7 +333,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                 username,
               );
 
-              if (!isUserExist || user?.inviter) {
+              if (!isUserExist || !user?.inviter) {
                 if (
                   first_name && username &&
                   message?.from?.id && user?.inviter &&
@@ -353,6 +354,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                   };
                   await ctx.replyWithChatAction("typing");
                   await createUser(userObj);
+                  console.log("356 sendMenu")
                   await welcomeMenu(ctx);
                   await startIzbushka(ctx);
                   return;
@@ -700,13 +702,15 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             throw new Error(`Failed to fetch video: ${errorText}`);
           }
 
-          newUser && await ctx.replyWithVideo(videoUrl, {
+          if (newUser){ 
+            await ctx.replyWithVideo(videoUrl, {
             caption: intro({ language_code }),
             reply_markup: {
               inline_keyboard: menuButton({ language_code }),
             },
           });
           await botLinks(ctx, isRu);
+        }
           return;
         } else {
 
@@ -774,7 +778,9 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   console.log(ctx);
   const isHaveAnswer = callbackData.split("_").length === 4;
 
-  await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+  
+    await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+    if (callbackData.startsWith("start_test") || callbackData.startsWith("automation")) {
 
   if (callbackData === "start_test") {
     try {
@@ -1078,7 +1084,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       console.error(error);
     }
   }
-
+}
   if (callbackData.startsWith("create_profile")) {
     await ctx.reply(
       isRu
