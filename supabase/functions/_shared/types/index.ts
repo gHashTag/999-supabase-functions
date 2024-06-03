@@ -29,14 +29,14 @@ export type SupabaseUser = TUser & {
 };
 
 export interface UserContext {
-        username: string;
-        first_name: string;
-        last_name?: string;
-        is_bot: boolean;
-        language_code: string;
-        chat_id: number
-        inviter: string
-        telegram_id: number
+  username: string;
+  first_name: string;
+  last_name?: string;
+  is_bot: boolean;
+  language_code: string;
+  chat_id: number;
+  inviter: string;
+  telegram_id: number;
 }
 
 export interface UserData extends TUser {
@@ -110,7 +110,7 @@ export interface PassportUser {
   type: "room";
   is_owner: boolean;
   photo_url: string | null;
-  rooms: { chat_id: string };
+  rooms?: { chat_id: string };
 }
 
 export interface RoomNode {

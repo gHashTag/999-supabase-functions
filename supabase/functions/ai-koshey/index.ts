@@ -38,15 +38,10 @@ import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 import { createVideo } from "../_shared/heygen/index.ts";
 import {
-  getBiggest,
   getCorrects,
-  getLastCallback,
   getQuestion,
   resetProgress,
-  updateProgress,
-  updateResult,
 } from "../_shared/supabase/progress.ts";
-import { pathIncrement } from "../path-increment.ts";
 
 export type CreateUserT = {
   id: number;
@@ -63,6 +58,22 @@ export type CreateUserT = {
 };
 
 const videoUrl = "https://t.me/dao999nft_storage/2";
+
+// Обработчик команды "avatar"
+botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
+  const isRu = ctx.from?.language_code === "ru";
+  await ctx.replyWithChatAction("typing");
+
+  await ctx.reply(
+    `${isRu ? "Пришли текст" : "Send text"}`,
+    {
+      reply_markup: {
+        force_reply: true,
+      },
+    },
+  );
+  return;
+});
 
 const startIzbushka = async (ctx: Context) => {
   try {
@@ -245,22 +256,6 @@ botAiKoshey.command("post", async (ctx) => {
         : "Failed to send message with video to the channel.",
     );
   }
-});
-
-// Обработчик команды "avatar"
-botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
-  const isRu = ctx.from?.language_code === "ru";
-  await ctx.replyWithChatAction("typing");
-
-  await ctx.reply(
-    `${isRu ? "Пришли текст" : "Send text"}`,
-    {
-      reply_markup: {
-        force_reply: true,
-      },
-    },
-  );
-  return;
 });
 
 const botLinks = async (ctx: Context, isRu: boolean) => {
