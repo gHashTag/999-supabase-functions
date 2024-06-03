@@ -57,6 +57,22 @@ export type CreateUserT = {
 
 const videoUrl = "https://t.me/dao999nft_storage/2";
 
+// Обработчик команды "avatar"
+botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
+  const isRu = ctx.from?.language_code === "ru";
+  await ctx.replyWithChatAction("typing");
+
+  await ctx.reply(
+    `${isRu ? "Пришли текст" : "Send text"}`,
+    {
+      reply_markup: {
+        force_reply: true,
+      },
+    },
+  );
+  return;
+});
+
 const startIzbushka = async (ctx: Context) => {
   try {
     const isRu = ctx.from?.language_code === "ru";
@@ -240,22 +256,6 @@ botAiKoshey.command("post", async (ctx) => {
     console.error("Failed to send message with video to the channel:", error);
     await ctx.reply(isRu ? "Не удалось отправить сообщение с видео в канал." : "Failed to send message with video to the channel.");
   }
-});
-
-// Обработчик команды "avatar"
-botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
-  const isRu = ctx.from?.language_code === "ru";
-  await ctx.replyWithChatAction("typing");
-
-  await ctx.reply(
-    `${isRu ? "Пришли текст" : "Send text"}`,
-    {
-      reply_markup: {
-        force_reply: true,
-      },
-    },
-  );
-  return;
 });
 
 const botLinks = async (ctx: Context, isRu: boolean) => {
