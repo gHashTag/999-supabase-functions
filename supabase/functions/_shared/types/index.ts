@@ -283,10 +283,9 @@ export interface getAiSupabaseFeedbackT {
 }
 
 export interface createVoiceT {
-  file: Blob
-  telegram_id: string
+  fileUrl: string;
+  username: string;
 }
-
 
 export interface UserProfile {
   username: string;
