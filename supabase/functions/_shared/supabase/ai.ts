@@ -303,14 +303,14 @@ export const createVoiceMessage = async (
   const options = {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      "xi-api-key": "abe4d0befe21e3503beacd6b1d3db47d",
+      'Content-Type': 'application/json',
+      'xi-api-key': XI_API_KEY as string,
     },
     body: JSON.stringify({
       text,
       voice_settings: {
-        stability: 1,
-        similarity_boost: 1,
+        stability: 0.5,
+        similarity_boost: 0.5,
       },
     }),
   };
@@ -321,9 +321,7 @@ export const createVoiceMessage = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(
-        `Failed to create voice message: ${response.statusText} - ${errorText}`,
-      );
+      throw new Error(`Failed to fetch audio: ${response.statusText} - ${errorText}`);
     }
 
     const arrayBuffer = await response.arrayBuffer();
@@ -345,15 +343,15 @@ export const createVoiceMessage = async (
       },
     );
 
-    const telegramData = await telegramResponse.json();
-    console.log("telegramData", telegramData);
-
     if (!telegramResponse.ok) {
       const errorText = await telegramResponse.text();
       throw new Error(
         `Failed to send audio message: ${telegramResponse.statusText} - ${errorText}`,
       );
     }
+
+    const telegramData = await telegramResponse.json();
+    console.log("telegramData", telegramData);
 
     return telegramData;
   } catch (err) {
