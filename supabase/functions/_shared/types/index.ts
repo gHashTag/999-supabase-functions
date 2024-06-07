@@ -282,6 +282,11 @@ export interface getAiSupabaseFeedbackT {
   language_code: string;
 }
 
+export interface createVoiceT {
+  fileUrl: string;
+  username: string;
+}
+
 export interface UserProfile {
   username: string;
   company: string;

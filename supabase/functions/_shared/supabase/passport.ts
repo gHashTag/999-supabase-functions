@@ -157,8 +157,6 @@ export async function getPassportByRoomId(
       .eq("room_id", room_id)
       .eq("type", "room")
       .eq("is_owner", true);
-    
-    console.log(data, "data");
 
     if (error) {
       await bugCatcherRequest("getPassportByRoomId", error);

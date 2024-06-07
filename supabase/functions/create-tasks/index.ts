@@ -121,8 +121,6 @@ Deno.serve(async (req) => {
 
   try {
     if (type === "transcription.success") {
-      await supportRequest("transcription.success", data);
-
       const recording_id = data.recording_id;
       if (!recording_id) throw new Error("recording_id is null");
 
@@ -164,13 +162,18 @@ Deno.serve(async (req) => {
           summary_short,
         );
 
+        if (!data.room_id) throw new Error("room_id is null");
+        const users = await getPassportByRoomId(data.room_id);
+
+        if (!users) throw new Error("users is null");
+
         const roomAsset: TranscriptionAsset = {
           ...data,
           title: titleWithEmoji,
           summary_short,
           transcription,
-          workspace_id: data.workspace_id,
-          user_id: data.user_id,
+          workspace_id: users[0].workspace_id,
+          user_id: users[0].user_id,
         };
         console.log(roomAsset, "roomAsset");
         await setRoomAsset(roomAsset);
@@ -184,11 +187,6 @@ Deno.serve(async (req) => {
         );
         console.log(preparedTasks, "preparedTasks");
         if (!preparedTasks) throw new Error("preparedTasks is null");
-
-        if (!data.room_id) throw new Error("room_id is null");
-        const users = await getPassportByRoomId(data.room_id);
-
-        if (!users) throw new Error("users is null");
 
         const preparedUsers = getPreparedUsers(users);
         if (!preparedUsers) throw new Error("preparedUsers is null");
@@ -281,6 +279,13 @@ Deno.serve(async (req) => {
         console.log(passports, "passports");
         if (!passports) throw new Error("passports is null");
 
+        await supportRequest(
+          `transcription.success,\nrecording_id: ${data.recording_id},\nroom_id: ${data.room_id},\ntranscript_txt_presigned_url: ${data.transcript_txt_presigned_url},\nsummary_json_presigned_url: ${data.summary_json_presigned_url}`,
+          {
+            username: passports[0].username,
+          },
+        );
+
         for (const passport of passports) {
           const summary_short_url =
             `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;
@@ -296,9 +301,10 @@ Deno.serve(async (req) => {
               },
             },
           ];
+          if (!passport.rooms?.chat_id) throw new Error("chat_id is null");
 
           await bot.api.sendMessage(
-            Number(passport.rooms.chat_id),
+            Number(passport.rooms?.chat_id),
             `🚀 ${translated_short}`,
             {
               reply_markup: {

@@ -7,7 +7,7 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-import { delay } from "../_shared/constants.ts";
+import { AI_KOSHEY, delay } from "../_shared/constants.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import {
   AiKosheyContext,
@@ -20,6 +20,7 @@ import {
   checkAndReturnUser,
   checkUsernameCodes,
   getUid,
+  getUsernameByTelegramId,
   setSelectedIzbushka,
   updateUser,
 } from "../_shared/supabase/users.ts";
@@ -35,13 +36,24 @@ import {
   setPassport,
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
-import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
+import {
+  createVoice,
+  createVoiceMessage,
+  createVoiceSyncLabs,
+  getAiFeedbackFromSupabase,
+} from "../_shared/supabase/ai.ts";
 import { createVideo } from "../_shared/heygen/index.ts";
 import {
+  getBiggest,
   getCorrects,
+  getLastCallback,
   getQuestion,
   resetProgress,
+  updateProgress,
+  updateResult,
 } from "../_shared/supabase/progress.ts";
+import { pathIncrement } from "../path-increment.ts";
+import { deleteVoice, getVoiceId } from "../_shared/supabase/ai.ts";
 
 export type CreateUserT = {
   id: number;
@@ -117,6 +129,7 @@ const textError = (ctx: Context) => {
 };
 
 const welcomeMenu = async (ctx: Context) => {
+  console.log("✅welcomeMenu");
   await ctx.replyWithChatAction("upload_video"); // Отправка действия загрузки видео в чате
   const isRu = ctx.from?.language_code === "ru";
 
@@ -178,16 +191,16 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
   const menuButton = [
     [
       {
+        text: `💧 ${isRu ? "Вода" : "Water"}`,
+        callback_data: "water",
+      },
+      {
         text: `🔥 ${isRu ? "Огонь" : "Fire"}`,
         callback_data: "fire",
       },
       {
         text: `🎺 ${isRu ? "Медные трубы" : "Copper pipes"}`,
         callback_data: "copper_pipes",
-      },
-      {
-        text: `💧 ${isRu ? "Вода" : "Water"}`,
-        callback_data: "water",
       },
     ],
   ];
@@ -219,6 +232,20 @@ botAiKoshey.command("post", async (ctx) => {
     `<b>Ай Кощей 🤖 Персональный нейронный ассистент</b>\n\nРешение для управления встречами и задачами в <b>Telegram</b>,  использует возможности искусственного интеллекта и блокчейн-технологий <b>TON (The Open Network)</b> для создания эффективной и прозрачной системы взаимодействия пользователей. \n\nЭто функция <b>"Бортовой журнал"</b> — первый шаг в создании персонального цифрового аватара. \n\nНаше видение заключается в создании умного помощника, который не только записывает и анализирует встречи, но и активно помогает в управлении задачами, делегировании и планировании не выходя из телеграм.`;
   const message_two =
     `🌟 Добро пожаловать в мир наших удивительных ботов по обучению искусственному интеллекту, <b>JavaScript, TypeScript, React, Python и Tact! 🤖💡</b>\n\n🔍 Наши боты предлагают уникальную возможность заработать наш токен знаний $IGLA, погружаясь в мир новых технологий и углубляясь в востребованные навыки. 🚀\n\n💼 В отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь навыкам, которые значительно повысят вашу профессиональную ценность на рынке труда.\n\n📚 Не упустите шанс улучшить свои знания и навыки, становясь более востребованным специалистом в сфере IT!\n\nПрисоединяйтесь к нам и начните свое преображение <b>прямо сейчас</b>!`;
+  const telegram_id = ctx.from?.id;
+  if (!telegram_id) throw new Error("No telegram id");
+  const chatMember = await botAiKoshey.api.getChatMember(chatId, telegram_id);
+  const isAdmin = chatMember.status === "administrator" ||
+    chatMember.status === "creator";
+  if (!isAdmin) {
+    await ctx.reply(
+      isRu
+        ? "У вас нет прав администратора для выполнения этого действия."
+        : "You do not have admin rights to perform this action.",
+    );
+    return;
+  }
+
   try {
     await botAiKoshey.api.sendVideo(chatId, videoUrl, {
       caption: message,
@@ -310,6 +337,7 @@ botAiKoshey.command("profile", async (ctx) => {
 // Обработчик команды "start"
 botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   await ctx.replyWithChatAction("typing");
+  const telegram_id = ctx.from?.id.toString();
 
   const params = ctx?.message?.text && ctx?.message?.text.split(" ")[1];
 
@@ -323,7 +351,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
     if (underscoreIndex !== -1) {
       const select_izbushka = params.substring(0, underscoreIndex); // Extract the part before '_'
-      const inviter = params.substring(underscoreIndex + 1); // Extract all after '_'
+      const inviter = await getUsernameByTelegramId(params.substring(underscoreIndex + 1)); // Extract all after '_'
 
       // Check if the selected hut and inviter exist
       if (select_izbushka && inviter) {
@@ -336,16 +364,16 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
             const first_name = message?.from?.first_name;
             const last_name = message?.from?.last_name || "";
 
-            if (username) {
+            if (telegram_id) {
               await ctx.replyWithChatAction("typing");
               // Check if the user exists and create it if it doesn't
-              const { isUserExist, user } = await checkAndReturnUser(
-                username,
+              const { isUserExist, user} = await checkAndReturnUser(
+                telegram_id,
               );
 
-              if (!isUserExist || user?.inviter) {
+              if (!isUserExist || !user?.inviter) {
                 if (
-                  first_name && username &&
+                  first_name && telegram_id && username &&
                   message?.from?.id && user?.inviter &&
                   message?.from?.language_code && message?.chat?.id
                 ) {
@@ -364,13 +392,14 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                   };
                   await ctx.replyWithChatAction("typing");
                   await createUser(userObj);
+                  console.log("356 sendMenu");
                   await welcomeMenu(ctx);
                   await startIzbushka(ctx);
                   return;
                 }
               } else {
                 const { isUserExist, user } = await checkAndReturnUser(
-                  username,
+                  telegram_id,
                 );
                 if (isUserExist && user?.inviter) {
                   await ctx.replyWithChatAction("typing");
@@ -382,17 +411,19 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                     izbushka && user && first_name &&
                     user.telegram_id && izbushka.workspace_id
                   ) {
+                    if (!ctx.chat) throw new Error("No chat")
                     const passport_user: PassportUser = {
                       user_id: user.user_id,
                       workspace_id: izbushka.workspace_id,
                       room_id: izbushka.room_id,
-                      username,
+                      username: "",
                       first_name,
                       last_name,
                       chat_id: user.telegram_id,
                       type: "room",
                       is_owner: false,
                       photo_url: user.photo_url || null,
+                      rooms: { chat_id: ctx.chat.id.toString() }
                     };
 
                     const isPassportExist = await checkPassportByRoomId(
@@ -405,9 +436,9 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                       await setPassport(passport_user);
                     }
 
-                    if (select_izbushka && username) {
+                    if (select_izbushka && telegram_id) {
                       await setSelectedIzbushka(
-                        username,
+                        telegram_id,
                         select_izbushka,
                       );
                     }
@@ -443,10 +474,10 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
           return;
         }
       } else {
-        if (username) {
+        if (telegram_id) {
           // Check if the user exists and send the corresponding message
-          const { isUserExist, user } = await checkAndReturnUser(username);
-          console.log(user, "user");
+          const { isUserExist, user } = await checkAndReturnUser(telegram_id);
+          console.log(user, "user")
           if (isUserExist && user?.inviter) {
             console.log("440 sendMenu");
             language_code && await welcomeMenu(ctx);
@@ -457,8 +488,8 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
         } else {
           const textError = `${
             language_code === "ru"
-              ? "🤔 Ошибка: Username not found."
-              : "🤔 Error: Username not found."
+              ? "🤔 Ошибка: telegram_id not found."
+              : "🤔 Error: telegram_id not found."
           }`;
           await ctx.reply(textError);
           throw new Error(textError);
@@ -466,10 +497,10 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
       }
     }
   } else {
-    if (username) {
+    if (telegram_id) {
       try {
         const { isUserExist, user } = await checkAndReturnUser(
-          username,
+          telegram_id,
         );
 
         if (isUserExist && user?.inviter) {
@@ -515,12 +546,96 @@ botAiKoshey.command("digital_avatar", async (ctx) => {
   return;
 });
 
+botAiKoshey.command("text_to_speech", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+
+  const text = isRu
+    ? "🔮 Пожалуйста, отправьте текст, который вы хотите преобразовать в голосовое сообщение."
+    : "🔮 Please send the text you want to convert to a voice message.";
+
+  await ctx.reply(text, {
+    reply_markup: {
+      force_reply: true,
+    },
+  });
+  return;
+});
+
+botAiKoshey.command("reset_voice", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  const telegram_id = ctx.from?.id.toString();
+
+  const text = isRu
+    ? "🔮 О, добрый молодец! Голос твоего цифрового аватара был успешно сброшен, и теперь ты можешь создать новый."
+    : "🔮 Oh, noble traveler! The voice of your digital avatar has been successfully reset, and now you can create a new one.";
+  try {
+    // Сбрасываем голос цифрового аватара
+    if (!telegram_id) throw new Error("No telegram_id");
+    await updateUser(telegram_id, { voice_id_elevenlabs: null });
+    const voice_id_elevenlabs = await getVoiceId(telegram_id);
+    await deleteVoice(voice_id_elevenlabs);
+    await ctx.reply(text);
+  } catch (error) {
+    await ctx.reply(
+      isRu
+        ? "🤔 Ошибка при сбросе голоса цифрового аватара."
+        : "🤔 Error resetting digital avatar voice.",
+    );
+    await bugCatcherRequest(
+      "ai_koshey_bot (reset_voice)",
+      JSON.stringify(error),
+    );
+    throw new Error("Error resetting digital avatar voice.");
+  }
+});
+
+botAiKoshey.command("voice", async (ctx) => {
+  console.log("voice");
+  await ctx.replyWithChatAction("typing");
+  const isRu = ctx.from?.language_code === "ru";
+  const text = isRu
+    ? "🔮 О, добрый молодец! Пошли мне свой голос, и я, волшебным образом, буду говорить с тобой твоим собственным голосом, словно из сказки."
+    : "🔮 Please send me a voice message, and I will use it to create a voice avatar that speaks in your own voice.";
+
+  ctx.reply(text);
+});
+
+botAiKoshey.on("message:voice", async (ctx) => {
+  const voice = ctx.msg.voice;
+  console.log(voice, "voice");
+  const fileId = voice.file_id;
+  // Получаем файл голосового сообщения
+  const file = await ctx.api.getFile(fileId);
+  const filePath = file.file_path;
+  const fileUrl = `https://api.telegram.org/file/bot${AI_KOSHEY}/${filePath}`;
+
+  console.log(fileUrl, "fileUrl");
+  // Отправляем файл в ElevenLabs для создания нового голоса
+  const telegram_id = ctx.from?.id.toString();
+  const username = ctx.from?.username;
+  if (!username) throw new Error("No username");
+
+  const voiceId = await createVoiceSyncLabs({
+    fileUrl,
+    username
+  });
+  console.log(voiceId, "voiceId");
+  if (voiceId) {
+    await ctx.reply(`Голос успешно создан! Voice ID: ${voiceId}`);
+    await updateUser(telegram_id, { voice_id_synclabs: voiceId });
+  } else {
+    await ctx.reply("Ошибка при создании голоса.");
+  }
+});
+
 botAiKoshey.on("message:text", async (ctx: Context) => {
   await ctx.replyWithChatAction("typing");
   const inviter = ctx?.message?.text;
   const message = ctx.update.message;
   const language_code = message?.from?.language_code;
-  const username = message?.from?.username;
+  const telegram_id = message?.from?.id.toString();
 
   const isRu = ctx.from?.language_code === "ru";
 
@@ -532,6 +647,26 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
       ? ctx?.message?.reply_to_message?.caption
       : ctx?.message?.reply_to_message?.text;
 
+    if (
+      originalMessageText?.includes(
+        "🔮 Пожалуйста, отправьте текст, который вы хотите преобразовать в голосовое сообщение.",
+      ) ||
+      originalMessageText?.includes(
+        "🔮 Please send the text you want to convert to a voice message.",
+      )
+    ) {
+      // await ctx.replyWithChatAction("record_voice");
+      // const telegram_id = ctx.from?.id.toString()
+      // const botToken = AI_KOSHEY as string
+      // if (!telegram_id) throw new Error("No telegram_id")
+      // const voice_id_elevenlabs = await getVoiceId(telegram_id)
+      // if (!voice_id_elevenlabs) throw new Error("No voice_id_elevenlabs")
+      // if (!query) throw new Error("No query")
+      // const audio_url = await createVoiceMessage(query, voice_id_elevenlabs, telegram_id, botToken)
+      // console.log(audio_url)
+      ctx.reply("test");
+      return;
+    }
     if (ctx?.message?.reply_to_message) {
       console.log(ctx);
       const originalMessageText = ctx?.message?.reply_to_message?.caption
@@ -544,10 +679,10 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
         const text = ctx?.message?.text || "";
 
         if (!text && !message?.from?.id) throw new Error("No text or user_id");
-        if (!username) throw new Error("No username");
+        if (!telegram_id) throw new Error("No telegram_id");
 
         const { user } = await checkAndReturnUser(
-          username,
+          telegram_id,
         );
 
         if (!user) throw new Error("User not found");
@@ -718,13 +853,15 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
             throw new Error(`Failed to fetch video: ${errorText}`);
           }
 
-          newUser && await ctx.replyWithVideo(videoUrl, {
-            caption: intro({ language_code }),
-            reply_markup: {
-              inline_keyboard: menuButton({ language_code }),
-            },
-          });
-          await botLinks(ctx, isRu);
+          if (newUser) {
+            await ctx.replyWithVideo(videoUrl, {
+              caption: intro({ language_code }),
+              reply_markup: {
+                inline_keyboard: menuButton({ language_code }),
+              },
+            });
+            await botLinks(ctx, isRu);
+          }
           return;
         } else {
           await ctx.reply(textError(ctx), {
@@ -791,311 +928,268 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   console.log(ctx);
   const isHaveAnswer = callbackData.split("_").length === 4;
 
-  await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+    if (callbackData.startsWith("start_test") || callbackData.startsWith("automation")) {
 
   if (callbackData === "start_test") {
     try {
-      await resetProgress({
-        username: ctx.callbackQuery.from.username || "",
-        language: "automation",
-      });
+      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+      // await resetProgress({
+      //   username: ctx.callbackQuery.from.username || "",
+      //   language: "automation",
+      // });
       const questionContext = {
         lesson_number: 1,
         subtopic: 1,
       };
 
-      const questions = await getQuestion({
-        ctx: questionContext,
-        language: "automation",
-      });
-      if (questions.length > 0) {
+          const user_id = await getUid(ctx.callbackQuery.from.username || "");
+          if (!user_id) {
+            await ctx.reply("Пользователь не найден.");
+            return;
+          }
+          const topic = isRu ? ruTopic : enTopic;
+          const allAnswers = await getCorrects({
+            user_id: user_id.toString(),
+            language: "all",
+          });
+          // Формируем сообщение
+          const messageText =
+            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
+
+          // Формируем кнопки
+          const inlineKeyboard = [
+            [{
+              text: "Перейти к вопросу",
+              callback_data: `automation_01_01`,
+            }],
+          ];
+
+          if (image_lesson_url) {
+            // Отправляем сообщение
+            await ctx.replyWithPhoto(image_lesson_url || "", {
+              caption: messageText,
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: inlineKeyboard },
+            });
+            return;
+          } else {
+            await ctx.reply(messageText, {
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: inlineKeyboard },
+            });
+            return;
+          }
+        } else {
+          await ctx.reply("Вопросы не найдены.");
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    if (!isHaveAnswer) {
+      try {
+        const [language, lesson, subtopic] = callbackData.split("_");
+        let questions;
+        if (!isNaN(Number(lesson)) && !isNaN(Number(subtopic))) {
+          // Значения корректны, вызываем функцию.
+          const getQuestionContext = {
+            lesson_number: Number(lesson),
+            subtopic: Number(subtopic),
+          };
+          questions = await getQuestion({
+            ctx: getQuestionContext,
+            language,
+          });
+        } else {
+          // Одно из значений некорректно, обрабатываем ошибку.
+          console.error(
+            "Одно из значений некорректно(96):",
+            lesson,
+            subtopic,
+            callbackData,
+          );
+          await ctx.reply(
+            isRu
+              ? "Одно из значений некорректно. Пожалуйста, проверьте данные."
+              : "One of the values is incorrect. Please check the data.",
+          );
+          return;
+        }
         const {
-          topic: ruTopic,
+          question: ruQuestion,
+          variant_0: ruVariant_0,
+          variant_1: ruVariant_1,
+          variant_2: ruVariant_2,
+          question_en: enQuestion,
+          variant_0: enVariant_0,
+          variant_1: enVariant_1,
+          variant_2: enVariant_2,
+          id,
           image_lesson_url,
-          topic_en: enTopic,
         } = questions[0];
+
+        const question = isRu ? ruQuestion : enQuestion;
+        const variant_0 = isRu ? ruVariant_0 : enVariant_0;
+        const variant_1 = isRu ? ruVariant_1 : enVariant_1;
+        const variant_2 = isRu ? ruVariant_2 : enVariant_2;
 
         const user_id = await getUid(ctx.callbackQuery.from.username || "");
         if (!user_id) {
           await ctx.reply("Пользователь не найден.");
           return;
         }
-        const topic = isRu ? ruTopic : enTopic;
+        console.log(user_id);
         const allAnswers = await getCorrects({
           user_id: user_id.toString(),
           language: "all",
         });
         // Формируем сообщение
         const messageText =
-          `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
+          `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
 
         // Формируем кнопки
         const inlineKeyboard = [
           [{
-            text: "Перейти к вопросу",
-            callback_data: `automation_01_01`,
+            text: variant_0 || "Вариант 1",
+            callback_data: `${callbackData}_0`,
+          }],
+          [{
+            text: variant_1 || "Вариант 2",
+            callback_data: `${callbackData}_1`,
+          }],
+          [{
+            text: variant_2 || "Не знаю",
+            callback_data: `${callbackData}_2`,
           }],
         ];
 
         if (image_lesson_url) {
           // Отправляем сообщение
-          await ctx.replyWithPhoto(image_lesson_url || "", {
+          await ctx.editMessageCaption({
+            reply_markup: { inline_keyboard: inlineKeyboard },
             caption: messageText,
             parse_mode: "HTML",
-            reply_markup: { inline_keyboard: inlineKeyboard },
           });
-          return;
         } else {
-          await ctx.reply(messageText, {
-            parse_mode: "HTML",
+          await ctx.editMessageText(messageText, {
             reply_markup: { inline_keyboard: inlineKeyboard },
+            parse_mode: "HTML",
           });
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+  if (!isHaveAnswer) {
+    try {
+      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+      const [language, lesson, subtopic] = callbackData.split("_");
+      let questions;
+      if (!isNaN(Number(lesson)) && !isNaN(Number(subtopic))) {
+        // Значения корректны, вызываем функцию.
+        const getQuestionContext = {
+          lesson_number: Number(lesson),
+          subtopic: Number(subtopic),
+        };
+
+        const questions = await getQuestion({ ctx: questionContext, language });
+        if (questions.length > 0) {
+          const {
+            correct_option_id,
+          } = questions[0];
+
+          const user_id = await getUid(ctx.callbackQuery.from.username || "");
+          if (!user_id) {
+            await ctx.reply("Пользователь не найден.");
+            return;
+          }
+
+          const path = `${language}_${lesson_number}_${subtopic}`;
+          console.log(path, "path for getBiggest");
+          const biggestSubtopic = await getBiggest({
+            lesson_number: Number(lesson_number),
+            language,
+          });
+
+          let isTrueAnswer = null;
+          if (Number(correct_option_id) === Number(answer)) {
+            isTrueAnswer = true;
+            await ctx.reply("✅");
+          } else {
+            isTrueAnswer = false;
+            await ctx.reply("❌");
+          }
+          await updateProgress({
+            user_id: user_id.toString(),
+            isTrue: isTrueAnswer,
+            language,
+          });
+          console.log(biggestSubtopic, `biggestSubtopic`);
+          console.log(subtopic, `subtopic`);
+          const newPath = await pathIncrement({
+            path,
+            isSubtopic: Number(biggestSubtopic) === Number(subtopic)
+              ? false
+              : true,
+          });
+          const correctAnswers = await getCorrects({
+            user_id: user_id.toString(),
+            language,
+          });
+          const allAnswers = await getCorrects({
+            user_id: user_id.toString(),
+            language: "all",
+          });
+
+  if (isHaveAnswer) {
+    try {
+      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+      const [language, lesson_number, subtopic, answer] = callbackData.split(
+        "_",
+      );
+      const questionContext = {
+        lesson_number: Number(lesson_number),
+        subtopic: Number(subtopic),
+      };
+
+            // Формируем кнопки
+            const inlineKeyboard = [
+              [{
+                text: "Перейти к вопросу",
+                callback_data: newPath,
+              }],
+            ];
+            if (image_lesson_url) {
+              // Отправляем сообщение
+              await ctx.replyWithPhoto(image_lesson_url, {
+                caption: messageText,
+                parse_mode: "HTML",
+                reply_markup: { inline_keyboard: inlineKeyboard },
+              });
+              return;
+            } else {
+              await ctx.reply(messageText, {
+                parse_mode: "HTML",
+                reply_markup: { inline_keyboard: inlineKeyboard },
+              });
+              return;
+            }
+          } else {
+            await ctx.reply(
+              isRu ? "Вопросы не найдены." : "No questions found.",
+            );
+          }
+        } else {
+          console.error("Invalid callback(289)");
           return;
         }
-      } else {
-        await ctx.reply("Вопросы не найдены.");
+      } catch (error) {
+        console.error(error);
       }
-    } catch (error) {
-      console.error(error);
     }
   }
-  //
-  // if (!isHaveAnswer) {
-  //   try {
-  //     const [language, lesson, subtopic] = callbackData.split("_");
-  //     let questions;
-  //     if (!isNaN(Number(lesson)) && !isNaN(Number(subtopic))) {
-  //       // Значения корректны, вызываем функцию.
-  //       const getQuestionContext = {
-  //         lesson_number: Number(lesson),
-  //         subtopic: Number(subtopic),
-  //       };
-  //       questions = await getQuestion({
-  //         ctx: getQuestionContext,
-  //         language,
-  //       });
-  //     } else {
-  //       // Одно из значений некорректно, обрабатываем ошибку.
-  //       console.error(
-  //         "Одно из значений некорректно(96):",
-  //         lesson,
-  //         subtopic,
-  //         callbackData,
-  //       );
-  //       await ctx.reply(
-  //         isRu
-  //           ? "Одно из значений некорректно. Пожалуйста, проверьте данные."
-  //           : "One of the values is incorrect. Please check the data.",
-  //       );
-  //       return;
-  //     }
-  //     const {
-  //       question: ruQuestion,
-  //       variant_0: ruVariant_0,
-  //       variant_1: ruVariant_1,
-  //       variant_2: ruVariant_2,
-  //       question_en: enQuestion,
-  //       variant_0: enVariant_0,
-  //       variant_1: enVariant_1,
-  //       variant_2: enVariant_2,
-  //       id,
-  //       image_lesson_url,
-  //     } = questions[0];
-
-  //     const question = isRu ? ruQuestion : enQuestion;
-  //     const variant_0 = isRu ? ruVariant_0 : enVariant_0;
-  //     const variant_1 = isRu ? ruVariant_1 : enVariant_1;
-  //     const variant_2 = isRu ? ruVariant_2 : enVariant_2;
-
-  //     const user_id = await getUid(ctx.callbackQuery.from.username || "");
-  //     if (!user_id) {
-  //       await ctx.reply("Пользователь не найден.");
-  //       return;
-  //     }
-  //     console.log(user_id);
-  //     const allAnswers = await getCorrects({
-  //       user_id: user_id.toString(),
-  //       language: "all",
-  //     });
-  //     // Формируем сообщение
-  //     const messageText =
-  //       `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
-
-  //     // Формируем кнопки
-  //     const inlineKeyboard = [
-  //       [{
-  //         text: variant_0 || "Вариант 1",
-  //         callback_data: `${callbackData}_0`,
-  //       }],
-  //       [{
-  //         text: variant_1 || "Вариант 2",
-  //         callback_data: `${callbackData}_1`,
-  //       }],
-  //       [{
-  //         text: variant_2 || "Не знаю",
-  //         callback_data: `${callbackData}_2`,
-  //       }],
-  //     ];
-
-  //     if (image_lesson_url) {
-  //       // Отправляем сообщение
-  //       await ctx.editMessageCaption({
-  //         reply_markup: { inline_keyboard: inlineKeyboard },
-  //         caption: messageText,
-  //         parse_mode: "HTML",
-  //       });
-  //     } else {
-  //       await ctx.editMessageText(messageText, {
-  //         reply_markup: { inline_keyboard: inlineKeyboard },
-  //         parse_mode: "HTML",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // }
-
-  // if (isHaveAnswer) {
-  //   try {
-  //     const [language, lesson_number, subtopic, answer] = callbackData.split(
-  //       "_",
-  //     );
-  //     const questionContext = {
-  //       lesson_number: Number(lesson_number),
-  //       subtopic: Number(subtopic),
-  //     };
-
-  //     const questions = await getQuestion({ ctx: questionContext, language });
-  //     if (questions.length > 0) {
-  //       const {
-  //         correct_option_id,
-  //       } = questions[0];
-
-  //       const user_id = await getUid(ctx.callbackQuery.from.username || "");
-  //       if (!user_id) {
-  //         await ctx.reply("Пользователь не найден.");
-  //         return;
-  //       }
-
-  //       const path = `${language}_${lesson_number}_${subtopic}`;
-  //       console.log(path, "path for getBiggest")
-  //       const biggestSubtopic = await getBiggest({
-  //         lesson_number: Number(lesson_number),
-  //         language,
-  //       });
-
-  //       let isTrueAnswer = null;
-  //       if (Number(correct_option_id) === Number(answer)) {
-  //         isTrueAnswer = true;
-  //         await ctx.reply("✅");
-  //       } else {
-  //         isTrueAnswer = false;
-  //         await ctx.reply("❌");
-  //       }
-  //       await updateProgress({
-  //         user_id: user_id.toString(),
-  //         isTrue: isTrueAnswer,
-  //         language,
-  //       });
-  //       console.log(biggestSubtopic, `biggestSubtopic`);
-  //       console.log(subtopic, `subtopic`);
-  //       const newPath = await pathIncrement({
-  //         path,
-  //         isSubtopic: Number(biggestSubtopic) === Number(subtopic) ? false : true,
-  //       });
-  //       const correctAnswers = await getCorrects({
-  //         user_id: user_id.toString(),
-  //         language,
-  //       });
-  //       const allAnswers = await getCorrects({
-  //         user_id: user_id.toString(),
-  //         language: "all",
-  //       });
-
-  //       const lastCallbackId = await getLastCallback(language);
-  //       console.log(lastCallbackId);
-  //       if (lastCallbackId) {
-  //         if (questions[0].id === lastCallbackId) {
-  //           const correctProcent = (correctAnswers / lastCallbackId) * 100;
-  //           if (correctProcent >= 80) {
-  //             await updateResult({
-  //               user_id: user_id.toString(),
-  //               language,
-  //               value: true,
-  //             });
-  //             await ctx.reply(
-  //               isRu
-  //                 ? `<b>🥳 Поздравляем, вы прошли основной тест! Далее вы сможете пройти дополнительные тесты от искуственного интеллекта.</b>\n\n Total: ${allAnswers} $IGLA`
-  //                 : `<b>🥳 Congratulations, you passed the main test! Then you can pass the additional tests from the artificial intelligence.</b>\n\n Total: ${allAnswers} $IGLA`,
-  //               { parse_mode: "HTML" },
-  //             );
-  //           } else {
-  //             await updateResult({
-  //               user_id: user_id.toString(),
-  //               language,
-  //               value: false,
-  //             });
-  //             await ctx.reply(
-  //               isRu
-  //                 ? `<b>🥲 Вы не прошли основной тест, но это не помешает вам развиваться! </b>\n\n Total: ${allAnswers} $IGLA`
-  //                 : `<b>🥲 You didn't pass the main test, but that won't stop you from developing!</b>\n\n Total: ${allAnswers} $IGLA`,
-  //               { parse_mode: "HTML" },
-  //             );
-  //           }
-  //         }
-  //         console.log(newPath, `newPath ai koshey`);
-  //         const [newLanguage, newLesson, newSubtopic] = newPath.split("_");
-  //         const getQuestionContext = {
-  //           lesson_number: Number(newLesson),
-  //           subtopic: Number(newSubtopic),
-  //         };
-  //         const newQuestions = await getQuestion({
-  //           ctx: getQuestionContext,
-  //           language,
-  //         });
-  //         console.log(newQuestions, `newQuestions ai koshey for`);
-  //         console.log(getQuestionContext, `getQuestionContext`);
-  //         const { topic: ruTopic, image_lesson_url, topic_en: enTopic } =
-  //           newQuestions[0];
-  //         const topic = isRu ? ruTopic : enTopic;
-  //         // Формируем сообщение
-  //         const messageText =
-  //           `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> Total: ${allAnswers} $IGLA</b>`;
-
-  //         // Формируем кнопки
-  //         const inlineKeyboard = [
-  //           [{
-  //             text: "Перейти к вопросу",
-  //             callback_data: newPath,
-  //           }],
-  //         ];
-  //         if (image_lesson_url) {
-  //           // Отправляем сообщение
-  //           await ctx.replyWithPhoto(image_lesson_url, {
-  //             caption: messageText,
-  //             parse_mode: "HTML",
-  //             reply_markup: { inline_keyboard: inlineKeyboard },
-  //           });
-  //           return;
-  //         } else {
-  //           await ctx.reply(messageText, {
-  //             parse_mode: "HTML",
-  //             reply_markup: { inline_keyboard: inlineKeyboard },
-  //           });
-  //           return;
-  //         }
-  //       } else {
-  //         await ctx.reply(isRu ? "Вопросы не найдены." : "No questions found.");
-  //       }
-  //     } else {
-  //       console.error("Invalid callback(289)");
-  //       return;
-  //     }
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // }
-
   if (callbackData.startsWith("create_profile")) {
     await ctx.reply(
       isRu
@@ -1283,6 +1377,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   if (callbackData.includes("select_izbushka")) {
     try {
+      const telegram_id = ctx.from?.id.toString();
       const select_izbushka = callbackData.split("_")[2];
 
       if (select_izbushka) {
@@ -1300,8 +1395,8 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
       const textInvite = `${
         isRu
-          ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.\n[Инструкция подключения](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
-          : `Invitation to the DAO 999 NFT\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${username})\n\nAfter connecting to the bot, press the **Izbushka** button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
+          ? `🏰 **Приглашение в Тридевятое Царство** 🏰\n[Нажми на ссылку чтобы присоединиться!](https://t.me/${botUsername}?start=${select_izbushka}_${telegram_id})\n\nПосле подключения к боту нажми на кнопку **Izbushka**, чтобы войти на видео встречу.\n[Инструкция подключения](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
+          : `Invitation to the DAO 999 NFT\n[Press the link to join!](https://t.me/${botUsername}?start=${select_izbushka}_${telegram_id})\n\nAfter connecting to the bot, press the **Izbushka** button to enter the video meeting.\n[Instruction for connecting](https://youtube.com/shorts/YKG-1fdEtAs?si=ojKvK2DfPsZ0mbd5)`
       }`;
 
       await ctx.reply(textInvite, { parse_mode: "Markdown" });
@@ -1324,12 +1419,20 @@ await botAiKoshey.api.setMyCommands([
     description: "Create a digital avatar",
   },
   {
-    command: "/bots",
-    description: "Our Bots",
-  },
-  {
     command: "/course",
     description: "Start the course",
+  },
+  {
+    command: "/text_to_speech",
+    description: "Convert text to speech",
+  },
+  {
+    command: "/voice",
+    description: "Create voice ai-avatar",
+  },
+  {
+    command: "/reset_voice",
+    description: "Reset voice ai-avatar",
   },
 ]);
 

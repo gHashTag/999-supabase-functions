@@ -6,12 +6,16 @@ const model = new Supabase.ai.Session("gte-small");
 
 Deno.serve(async (req) => {
   const payload = await req.json();
+  console.log(payload, "payload");
   const oldRecord = payload?.old_record;
-  // console.log(oldRecord, "oldRecord");
-  const { title, transcription, id } = payload.record;
+  console.log(oldRecord, "oldRecord");
+  console.log(payload.record, "payload.record");
+  const { title, transcription, id } = payload?.record;
   const hasChanged = Object.keys(payload.record).some((key) =>
     payload.record[key] !== oldRecord[key]
   );
+
+  console.log(hasChanged, "hasChanged");
 
   // Check if any of the fields has changed
   if (!hasChanged) {
@@ -40,3 +44,5 @@ Deno.serve(async (req) => {
 
   return new Response("ok - updated");
 });
+
+// supabase functions deploy generate-embedding-room_assets --no-verify-jwt

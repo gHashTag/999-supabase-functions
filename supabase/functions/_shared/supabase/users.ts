@@ -269,16 +269,16 @@ export const checkUsernameAndReturnUser = async (
 };
 
 export async function checkAndReturnUser(
-  username: string,
+  telegram_id: string,
 ): Promise<{ isUserExist: boolean; user?: SupabaseUser }> {
   try {
     const response = await supabase
       .from("users")
       .select("*")
-      .eq("username", username);
+      .eq("telegram_id", telegram_id);
 
     if (response.error) {
-      console.log(response.error, "error checkUsername");
+      console.log(response.error, "error checkAndReturnUser");
       return {
         isUserExist: false,
       };
@@ -350,14 +350,14 @@ export const checkUsernameCodes = async (
 };
 
 export const setSelectedIzbushka = async (
-  username: string,
+  telegram_id: string,
   select_izbushka: string,
 ): Promise<SupabaseUser[][] | Response> => {
   try {
     const { data, error }: SupabaseResponse<SupabaseUser[]> = await supabase
       .from("users")
       .update({ select_izbushka })
-      .eq("username", username)
+      .eq("telegram_id", telegram_id)
       .select("*");
 
     if (error) {
@@ -367,5 +367,23 @@ export const setSelectedIzbushka = async (
     return data || [];
   } catch (error) {
     throw new Error("Error setSelectedIzbushka: " + error);
+  }
+};
+
+export async function getUsernameByTelegramId(telegram_id: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("username")
+      .eq("telegram_id", telegram_id)
+      .single();
+
+    if (error) {
+      throw new Error("Error getUsernameByTelegramId: " + error);
+    }
+
+    return data?.username || null;
+  } catch (error) {
+    throw new Error("Error getUsernameByTelegramId: " + error);
   }
 };
