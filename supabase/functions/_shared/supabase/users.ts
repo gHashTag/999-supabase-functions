@@ -360,6 +360,7 @@ export const setSelectedIzbushka = async (
       .eq("telegram_id", telegram_id)
       .select("*");
 
+      console.log(data, "363 data setSelectedIzbushka")
     if (error) {
       throw new Error("Error setSelectedIzbushka: " + error);
     }

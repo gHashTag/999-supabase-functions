@@ -108,6 +108,10 @@ export const babaYagaChatId = Deno.env.get("AI_BABA_YAGA_CHAT_ID");
 
 export const bugCatcherRequest = async (title: string, error: any) => {
   try {
+    if (DEV) {
+      console.log(`👾 ${title}\n\n${JSON.stringify(error)}`)
+      return
+    }
     if (babaYagaChatId) {
       await bugCatcherDevBot.api.sendMessage(
         babaYagaChatId,
