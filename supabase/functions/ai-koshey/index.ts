@@ -67,7 +67,7 @@ export type CreateUserT = {
   select_izbushka: string;
 };
 
-const videoUrl = "https://t.me/dao999nft_storage/5";
+const videoUrl = (isRu: boolean) => isRu ? "https://t.me/dao999nft_storage/5" : "https://t.me/dao999nft_storage/6";
 
 // Обработчик команды "avatar"
 botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
@@ -139,7 +139,7 @@ const welcomeMenu = async (ctx: Context) => {
     ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`
     : `🏰 The hut turned its front to you, and its back to the forest. If you go to the left you will be warmed by the fire, you will go straight ahead in the water and you will rejuvenate, and to the right you will go into a copper pipe.`;
 
-  await ctx.replyWithVideo(videoUrl, {
+  await ctx.replyWithVideo(videoUrl(isRu), {
     caption: text,
     reply_markup: {
       inline_keyboard: [
@@ -171,7 +171,7 @@ const welcomeMessage = async (ctx: Context) => {
     ? `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`
     : `🏰 Welcome, ${ctx?.update?.message?.from?.first_name}! \nThe all-powerful Babya Yaga, the ruler of secrets and charms, is preparing to confront you with the gates of the unknown world.\nTo save you from the front and not the back, remember to speak the word-a-word.`;
 
-  await ctx.replyWithVideo(videoUrl, {
+  await ctx.replyWithVideo(videoUrl(isRu), {
     caption: text,
     reply_markup: {
       force_reply: true,
@@ -254,7 +254,7 @@ botAiKoshey.command("post", async (ctx) => {
   }
 
   try {
-    await botAiKoshey.api.sendVideo(chatId, videoUrl, {
+    await botAiKoshey.api.sendVideo(chatId, videoUrl(isRu), {
       caption: message,
       parse_mode: "HTML",
     });
@@ -370,6 +370,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
           const { isInviterExist, inviter_user_id, invitation_codes } =
             await checkUsernameCodes(inviter);
 
+            console.log(isInviterExist, "373 isInviterExist")
           if (isInviterExist && invitation_codes) {
             const first_name = message?.from?.first_name;
             const last_name = message?.from?.last_name || "";
@@ -380,13 +381,16 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
               const { isUserExist, user } = await checkAndReturnUser(
                 telegram_id,
               );
+              console.log(isUserExist, "384 isUserExist")
 
-              if (!isUserExist || !user?.inviter) {
+              if (isUserExist === false || !user?.inviter) {
+                console.log(387)
                 if (
                   first_name && username &&
-                  message?.from?.id && user?.inviter &&
+                  message?.from?.id && !user?.inviter &&
                   message?.from?.language_code && message?.chat?.id
                 ) {
+                  console.log("392")
                   const userObj: CreateUserT = {
                     id: message?.from?.id,
                     username,
@@ -401,7 +405,8 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
                     select_izbushka,
                   };
                   await ctx.replyWithChatAction("typing");
-                  await createUser(userObj);
+                  const user = await createUser(userObj);
+                  console.log(user, "user 407")
                   console.log("356 sendMenu");
                   await welcomeMenu(ctx);
                   await startIzbushka(ctx);
@@ -871,18 +876,8 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
           const newUser = await createUser(user);
           await ctx.replyWithChatAction("typing");
 
-          const videoResponse = await fetch(videoUrl);
-          if (!videoResponse.ok) {
-            const errorText = await videoResponse.text();
-            await bugCatcherRequest(
-              "sendVideo",
-              `Failed to fetch video: ${errorText}`,
-            );
-            throw new Error(`Failed to fetch video: ${errorText}`);
-          }
-
           if (newUser) {
-            await ctx.replyWithVideo(videoUrl, {
+            await ctx.replyWithVideo(videoUrl(isRu), {
               caption: await intro(ctx),
               reply_markup: {
                 inline_keyboard: await menuButton(ctx),
@@ -1007,12 +1002,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
           });
           // Формируем сообщение
           const messageText =
-            `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b>Total: ${allAnswers} $IGLA</b>`;
+            `${topic}\n\n<i><u>${isRu ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${isRu ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
 
           // Формируем кнопки
           const inlineKeyboard = [
             [{
-              text: "Перейти к вопросу",
+              text: isRu ? "Перейти к вопросу" : "Go to the question",
               callback_data: `automation_01_01`,
             }],
           ];
@@ -1033,7 +1028,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             return;
           }
         } else {
-          await ctx.reply("Вопросы не найдены.");
+          await ctx.reply(isRu ? "Вопросы не найдены." : "No questions found.");
         }
       } catch (error) {
         console.error(error);
@@ -1099,20 +1094,20 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         });
         // Формируем сообщение
         const messageText =
-          `<b>Вопрос №${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
+          `<b>№${id}</b>\n\n${question}\n\n<b> Total: ${allAnswers} $IGLA</b>`;
 
         // Формируем кнопки
         const inlineKeyboard = [
           [{
-            text: variant_0 || "Вариант 1",
+            text: variant_0 || "Variant 1",
             callback_data: `${callbackData}_0`,
           }],
           [{
-            text: variant_1 || "Вариант 2",
+            text: variant_1 || "Variant 2",
             callback_data: `${callbackData}_1`,
           }],
           [{
-            text: variant_2 || "Не знаю",
+            text: variant_2 || (isRu ? "Не знаю" : "I don't know"),
             callback_data: `${callbackData}_2`,
           }],
         ];
@@ -1153,7 +1148,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
           const user_id = await getUid(ctx.callbackQuery.from.username || "");
           if (!user_id) {
-            await ctx.reply("Пользователь не найден.");
+            await ctx.reply(isRu ? "Пользователь не найден." : "User not found.");
             return;
           }
 
@@ -1242,12 +1237,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             const topic = isRu ? ruTopic : enTopic;
             // Формируем сообщение
             const messageText =
-              `${topic}\n\n<i><u>Теперь мы предлагаем вам закрепить полученные знания.</u></i>\n\n<b> Total: ${allAnswers} $IGLA</b>`;
+              `${topic}\n\n<i><u>${isRu ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${isRu ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
 
             // Формируем кнопки
             const inlineKeyboard = [
               [{
-                text: "Перейти к вопросу",
+                text: isRu ? "Перейти к вопросу" : "Go to the question",
                 callback_data: newPath,
               }],
             ];

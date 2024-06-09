@@ -413,18 +413,21 @@ export const setLanguage = async (
 
 export async function getLanguage(telegram_id: string): Promise<string | null> {
   try {
+    console.log("telegram_id", telegram_id)
     const { data, error } = await supabase
       .from("users")
       .select("language")
       .eq("telegram_id", telegram_id)
       .single();
 
+      console.log(data, "data getLanguage")
     if (error) {
-      throw new Error("Error getLanguage: " + error);
+      return "english"
     }
 
     return data?.language || null;
   } catch (error) {
+    console.log(error, "error getLanguage")
     throw new Error("Error getLanguage: " + error);
   }
 }
