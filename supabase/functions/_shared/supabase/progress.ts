@@ -218,7 +218,7 @@ export async function getCorrects(
         .from("progress")
         .select("*")
         .eq("user_id", user_id)
-        .single();
+        .maybeSingle();
 
       console.log(dataCorrects, "dataCorrects");
       console.log(errorCorrects, "errorCorrects");
@@ -228,15 +228,24 @@ export async function getCorrects(
       }
 
       if (!dataCorrects) {
-        throw new Error("User not found");
+        // Создаем новую строку с user_id
+        const { error: insertError } = await supabase
+          .from("progress")
+          .insert([{ user_id: user_id, [language]: 0, all: 0 }]);
+
+        if (insertError) {
+          throw new Error("Error inserting new progress: " + insertError.message);
+        }
+
+        return 0; // Возвращаем 0, так как это новая запись
       }
 
+      console.log(dataCorrects, "dataCorrects");
       const correctAnswers = dataCorrects[language];
 
       return correctAnswers;
     } else {
-      console.error("user_id Type is undefined");
-      throw 0;
+      throw new Error("user_id Type is undefined");
     }
   } catch (error) {
     throw new Error("Error getCorrects(254): " + error);

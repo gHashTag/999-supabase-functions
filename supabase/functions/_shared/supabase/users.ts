@@ -388,3 +388,43 @@ export async function getUsernameByTelegramId(telegram_id: string): Promise<stri
     throw new Error("Error getUsernameByTelegramId: " + error);
   }
 };
+
+export const setLanguage = async (
+  telegram_id: string,
+  language: string,
+): Promise<SupabaseUser[][] | Response> => {
+  try {
+    const { data, error }: SupabaseResponse<SupabaseUser[]> = await supabase
+      .from("users")
+      .update({ language })
+      .eq("telegram_id", telegram_id)
+      .select("*");
+
+    console.log(data, "data setLanguage");
+    if (error) {
+      throw new Error("Error setLanguage: " + error);
+    }
+
+    return data || [];
+  } catch (error) {
+    throw new Error("Error setLanguage: " + error);
+  }
+};
+
+export async function getLanguage(telegram_id: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("language")
+      .eq("telegram_id", telegram_id)
+      .single();
+
+    if (error) {
+      throw new Error("Error getLanguage: " + error);
+    }
+
+    return data?.language || null;
+  } catch (error) {
+    throw new Error("Error getLanguage: " + error);
+  }
+}

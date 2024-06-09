@@ -19,8 +19,10 @@ import {
 import {
   checkAndReturnUser,
   checkUsernameCodes,
+  getLanguage,
   getUid,
   getUsernameByTelegramId,
+  setLanguage,
   setSelectedIzbushka,
   updateUser,
 } from "../_shared/supabase/users.ts";
@@ -46,7 +48,6 @@ import {
   getCorrects,
   getLastCallback,
   getQuestion,
-  resetProgress,
   updateProgress,
   updateResult,
 } from "../_shared/supabase/progress.ts";
@@ -66,11 +67,12 @@ export type CreateUserT = {
   select_izbushka: string;
 };
 
-const videoUrl = "https://t.me/dao999nft_storage/2";
+const videoUrl = "https://t.me/dao999nft_storage/5";
 
 // Обработчик команды "avatar"
 botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   await ctx.replyWithChatAction("typing");
 
   await ctx.reply(
@@ -86,7 +88,8 @@ botAiKoshey.command("avatar", async (ctx: AiKosheyContext) => {
 
 const startIzbushka = async (ctx: Context) => {
   try {
-    const isRu = ctx.from?.language_code === "ru";
+    if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
     // const text = isRu
     //   ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Нажми кнопку "Izbushka", чтобы начать встречу.`
     //   : `🏰 The hut turned its front to you, and its back to the forest. Tap the "Izbushka" button to start the encounter.`;
@@ -116,8 +119,9 @@ const startIzbushka = async (ctx: Context) => {
   }
 };
 
-const textError = (ctx: Context) => {
-  const isRu = ctx.from?.language_code === "ru";
+const textError = async (ctx: Context) => {
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   return `🔒 ${
     isRu
       ? "Ох, увы и ах! Словечко, что до меня дошло, чарам тайным не отвечает. Прошу, дай знать иное, что ключом является верным, чтоб путь твой в царство дивное открыть сумели без замедления.\n\nЛибо вы можете попробовать пройти наш курс по нейросетям, использовав команду /course, и заработать наш токен $IGLA."
@@ -128,7 +132,8 @@ const textError = (ctx: Context) => {
 const welcomeMenu = async (ctx: Context) => {
   console.log("✅welcomeMenu");
   await ctx.replyWithChatAction("upload_video"); // Отправка действия загрузки видео в чате
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
 
   const text = isRu
     ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. Налево пойдешь - огнем согреешься, прямо пойдешь - в водичке омолодишься, а направо пойдешь - в медную трубу попадешь.`
@@ -160,7 +165,8 @@ const welcomeMenu = async (ctx: Context) => {
 };
 
 const welcomeMessage = async (ctx: Context) => {
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   const text = isRu
     ? `🏰 Добро пожаловать в Тридевятое Царство, ${ctx?.update?.message?.from?.first_name}! \nВсемогущая Баба Яга, владычица тайн и чародейница, пред врата неведомого мира тебя привечает.\nЧтоб изба к тебе передком обернулась, а не задом стояла, не забудь прошептать кабы словечко-проходное.`
     : `🏰 Welcome, ${ctx?.update?.message?.from?.first_name}! \nThe all-powerful Babya Yaga, the ruler of secrets and charms, is preparing to confront you with the gates of the unknown world.\nTo save you from the front and not the back, remember to speak the word-a-word.`;
@@ -174,8 +180,9 @@ const welcomeMessage = async (ctx: Context) => {
   return;
 };
 
-const intro = ({ language_code = "en" }: { language_code?: string }) => {
-  const isRu = language_code === "ru";
+const intro = async (ctx: Context) => {
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   const intro = isRu
     ? `🏰 Избушка повернулась к тебе передом, а к лесу задом. На лево пойдешь огнем согреешься, прямо пойдешь в водичке омолодишься, а на право пойдешь в медную трубу попадешь.`
     : `🏰 The hut turned its front to you, and its back to the forest. If you go to the left you will be warmed by the fire, you will go straight ahead in the water and you will rejuvenate, and to the right you will go into a copper pipe.
@@ -183,8 +190,9 @@ const intro = ({ language_code = "en" }: { language_code?: string }) => {
   return intro;
 };
 
-const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
-  const isRu = language_code === "ru";
+const menuButton = async (ctx: Context) => {
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   const menuButton = [
     [
       {
@@ -207,7 +215,8 @@ const menuButton = ({ language_code = "en" }: { language_code?: string }) => {
 botAiKoshey.command("course", async (ctx) => {
   console.log("course");
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   await ctx.reply(
     isRu
       ? `Чтобы начать тест, нажмите кнопку ниже!`
@@ -223,7 +232,8 @@ botAiKoshey.command("course", async (ctx) => {
 });
 
 botAiKoshey.command("post", async (ctx) => {
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   const chatId = "-1002228291515";
   const message =
     `<b>Ай Кощей 🤖 Персональный нейронный ассистент</b>\n\nРешение для управления встречами и задачами в <b>Telegram</b>,  использует возможности искусственного интеллекта и блокчейн-технологий <b>TON (The Open Network)</b> для создания эффективной и прозрачной системы взаимодействия пользователей. \n\nЭто функция <b>"Бортовой журнал"</b> — первый шаг в создании персонального цифрового аватара. \n\nНаше видение заключается в создании умного помощника, который не только записывает и анализирует встречи, но и активно помогает в управлении задачами, делегировании и планировании не выходя из телеграм.`;
@@ -311,14 +321,16 @@ const botLinks = async (ctx: Context, isRu: boolean) => {
 
 botAiKoshey.command("bots", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   await botLinks(ctx, isRu);
   return;
 });
 
 botAiKoshey.command("profile", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
 
   await ctx.reply(isRu ? "Создать профиль" : "Create profile", {
     reply_markup: {
@@ -341,7 +353,8 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   const username = message?.from?.username;
   const telegram_id = message?.from?.id.toString();
   const language_code = message?.from?.language_code;
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
 
   if (params) {
     const underscoreIndex = params.indexOf("_"); // Search for the index of the first '_'
@@ -523,9 +536,25 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   }
 });
 
+botAiKoshey.command("language", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const { user } = await checkAndReturnUser(ctx.from?.id.toString());
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
+  user && ctx.reply(isRu ? "🌏 Выберите язык" : "🌏 Select language", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: isRu ? "🇷🇺 Русский" : "🇷🇺 Russian", callback_data: "select_russian" }],
+        [{ text: isRu ? "🇬🇧 English" : "🇬🇧 English", callback_data: "select_english" }],
+      ],
+    },
+  })
+});
+
 botAiKoshey.command("digital_avatar", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
 
   await ctx.reply(
     isRu ? "Создать цифрового аватара" : "Create digital avatar",
@@ -589,7 +618,8 @@ botAiKoshey.command("digital_avatar", async (ctx) => {
 botAiKoshey.command("voice", async (ctx) => {
   console.log("voice");
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   const text = isRu
     ? "🔮 О, добрый молодец! Пошли мне свой голос, и я, волшебным образом, буду говорить с тобой твоим собственным голосом, словно из сказки."
     : "🔮 Please send me a voice message, and I will use it to create a voice avatar that speaks in your own voice.";
@@ -633,7 +663,8 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
   const username = message?.from?.username;
   const telegram_id = message?.from?.id.toString();
 
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
 
   // Check if the message is a reply (if there is a reply_to_message)
   if (ctx?.message?.reply_to_message) {
@@ -852,16 +883,16 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
 
           if (newUser) {
             await ctx.replyWithVideo(videoUrl, {
-              caption: intro({ language_code }),
+              caption: await intro(ctx),
               reply_markup: {
-                inline_keyboard: menuButton({ language_code }),
+                inline_keyboard: await menuButton(ctx),
               },
             });
             await botLinks(ctx, isRu);
           }
           return;
         } else {
-          await ctx.reply(textError(ctx), {
+          await ctx.reply(await textError(ctx), {
             reply_markup: {
               force_reply: true,
             },
@@ -916,7 +947,8 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
 
 botAiKoshey.on("callback_query:data", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   const callbackData = ctx.callbackQuery.data;
 
   const telegram_id = ctx.callbackQuery.from.id.toString();
@@ -931,16 +963,22 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
   }
 
+  if (callbackData === "select_russian") {
+    await setLanguage(ctx.from?.id.toString(), "russian");
+    await ctx.reply(isRu ? "Выбран русский" : "Russian selected");
+  }
+  if (callbackData === "select_english") {
+    await setLanguage(ctx.from?.id.toString(), "english");
+    await ctx.reply(isRu ? "Выбран английский" : "English selected");
+  }
+
   if (
     callbackData.startsWith("start_test") ||
     callbackData.startsWith("automation")
   ) {
     if (callbackData === "start_test") {
       try {
-        await resetProgress({
-          username: ctx.callbackQuery.from.username || "",
-          language: "automation",
-        });
+        console.log(`start_test`)
         const questionContext = {
           lesson_number: 1,
           subtopic: 1,
@@ -1037,9 +1075,9 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
           variant_1: ruVariant_1,
           variant_2: ruVariant_2,
           question_en: enQuestion,
-          variant_0: enVariant_0,
-          variant_1: enVariant_1,
-          variant_2: enVariant_2,
+          variant_0_en: enVariant_0,
+          variant_1_en: enVariant_1,
+          variant_2_en: enVariant_2,
           id,
           image_lesson_url,
         } = questions[0];
@@ -1472,6 +1510,10 @@ await botAiKoshey.api.setMyCommands([
   {
     command: "/course",
     description: "Start the course",
+  },
+  {
+    command: "/language",
+    description: "Select language",
   },
   // {
   //   command: "/text_to_speech",

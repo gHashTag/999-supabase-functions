@@ -4,10 +4,9 @@ import {
   getLastCallback,
   getQuestion,
   resetProgress,
-  updateProgress,
   updateResult,
 } from "../_shared/supabase/progress.ts";
-import { createUser, getUid } from "../_shared/supabase/users.ts";
+import { createUser, getUid, setLanguage, getLanguage, checkAndReturnUser } from "../_shared/supabase/users.ts";
 import { pathIncrement } from "../path-increment.ts";""
 
 import { checkSubscription } from "../check-subscription.ts";
@@ -21,10 +20,12 @@ import { GrammyError } from "https://deno.land/x/grammy@v1.22.4/core/error.ts";
 import { getAiFeedbackFromSupabase } from "../_shared/supabase/ai.ts";
 import { Context } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
-const videoUrl = "https://t.me/dao999nft_storage/2";
+const videoUrl = "https://t.me/dao999nft_storage/5";
 
 javaScriptDevBot.command("start", async (ctx) => {
   await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   if (!ctx.from) return;
   const user = await createUser({
     username: ctx.from?.username || "",
@@ -43,7 +44,6 @@ javaScriptDevBot.command("start", async (ctx) => {
     "-1002228291515",
   );
   console.log(isSubscription, "isSubscription")
-  const isRu = ctx.from?.language_code === "ru";
 
   if (isSubscription === true) {
     await ctx.reply(
@@ -98,6 +98,21 @@ javaScriptDevBot.command("start", async (ctx) => {
   }
 });
 
+javaScriptDevBot.command("language", async (ctx) => {
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const { user } = await checkAndReturnUser(ctx.from?.id.toString());
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
+  user && ctx.reply(isRu ? "🌏 Выберите язык" : "🌏 Select language", {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: isRu ? "🇷🇺 Русский" : "🇷🇺 Russian", callback_data: "select_russian" }],
+        [{ text: isRu ? "🇬🇧 English" : "🇬🇧 English", callback_data: "select_english" }],
+      ],
+    },
+  })
+});
+
 const botLinks = async (ctx: Context, isRu: boolean) => {
   await ctx.reply(
     isRu
@@ -122,7 +137,8 @@ const botLinks = async (ctx: Context, isRu: boolean) => {
 
 javaScriptDevBot.command("bots", async (ctx) => {
   await ctx.replyWithChatAction("typing");
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
   await botLinks(ctx, isRu);
   return;
 });
@@ -152,10 +168,19 @@ javaScriptDevBot.on("callback_query:data", async (ctx) => {
   console.log(ctx);
   const callbackData = ctx.callbackQuery.data;
   const isHaveAnswer = callbackData.split("_").length === 4;
-  const isRu = ctx.from?.language_code === "ru";
+  if (!ctx.from) throw new Error("User not found");
+  const isRu = await getLanguage(ctx.from?.id.toString()) === "russian";
 
   await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
 
+  if (callbackData === "select_russian") {
+    await setLanguage(ctx.from?.id.toString(), "russian");
+    await ctx.reply(isRu ? "Выбран русский" : "Russian selected");
+  }
+  if (callbackData === "select_english") {
+    await setLanguage(ctx.from?.id.toString(), "english");
+    await ctx.reply(isRu ? "Выбран английский" : "English selected");
+  }
   if (callbackData === "start_test") {
     try {
       await resetProgress({
@@ -354,11 +379,6 @@ javaScriptDevBot.on("callback_query:data", async (ctx) => {
           isTrueAnswer = false;
           await ctx.reply("❌");
         }
-        await updateProgress({
-          user_id: user_id.toString(),
-          isTrue: isTrueAnswer,
-          language,
-        });
         const newPath = await pathIncrement({
           path,
           isSubtopic: Number(biggestSubtopic) === Number(subtopic) ? false : true,
