@@ -371,7 +371,7 @@ export const setSelectedIzbushka = async (
   }
 };
 
-export async function getUsernameByTelegramId(telegram_id: string): Promise<string | null> {
+export async function getUsernameByTelegramId(telegram_id: string, ctx: any, lang: boolean): Promise<string | null> {
   try {
     const { data, error } = await supabase
       .from("users")
@@ -385,18 +385,19 @@ export async function getUsernameByTelegramId(telegram_id: string): Promise<stri
 
     return data?.username || null;
   } catch (error) {
-    throw new Error("Error getUsernameByTelegramId: " + error);
+    console.error("Error getUsernameByTelegramId: " + error)
+    return null 
   }
 };
 
 export const setLanguage = async (
   telegram_id: string,
-  language: string,
+  language_code: string,
 ): Promise<SupabaseUser[][] | Response> => {
   try {
     const { data, error }: SupabaseResponse<SupabaseUser[]> = await supabase
       .from("users")
-      .update({ language })
+      .update({ language_code })
       .eq("telegram_id", telegram_id)
       .select("*");
 
@@ -416,16 +417,16 @@ export async function getLanguage(telegram_id: string): Promise<string | null> {
     console.log("telegram_id", telegram_id)
     const { data, error } = await supabase
       .from("users")
-      .select("language")
+      .select("language_code")
       .eq("telegram_id", telegram_id)
       .single();
 
       console.log(data, "data getLanguage")
     if (error) {
-      return "english"
+      return null
     }
 
-    return data?.language || null;
+    return data?.language_code || null;
   } catch (error) {
     console.log(error, "error getLanguage")
     throw new Error("Error getLanguage: " + error);
