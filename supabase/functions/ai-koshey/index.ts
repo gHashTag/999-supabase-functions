@@ -333,16 +333,16 @@ botAiKoshey.command("bots", async (ctx) => {
   return;
 });
 
-botAiKoshey.command("profile", async (ctx) => {
+botAiKoshey.command("soul", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   if (!ctx.from) throw new Error("User not found");
   const lang = await isRu(ctx)
-
-  await ctx.reply(lang ? "Создать профиль" : "Create profile", {
+  console.log("soul");
+  await ctx.reply(lang ? "Чтобы наполнить вашего аватара душой, нажмите кнопку ниже" : "To fill your avatar's soul, click the button below", {
     reply_markup: {
       inline_keyboard: [[{
-        text: lang ? "Создать профиль" : "Create profile",
-        callback_data: "create_profile",
+        text: lang ? "Создать душу" : "Create soul",
+        callback_data: "create_soul",
       }]],
     },
   });
@@ -638,42 +638,59 @@ botAiKoshey.command("digital_avatar", async (ctx) => {
 
 botAiKoshey.command("voice", async (ctx) => {
   console.log("voice");
+  // await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  // const text = lang
+  //   ? "🔮 О, добрый молодец! Пошли мне свой голос, и я, волшебным образом, буду говорить с тобой твоим собственным голосом, словно из сказки."
+  //   : "🔮 Please send me a voice message, and I will use it to create a voice avatar that speaks in your own voice.";
+
+  // ctx.reply(text);
+  ctx.reply(lang ? "Чтобы использовать данную функцию, необходимо приобрести уровень water 🌊" : "To use this function, you need to purchase the water level 🌊")
+});
+
+botAiKoshey.command("face", async (ctx) => {
+  console.log("face");
   await ctx.replyWithChatAction("typing");
   if (!ctx.from) throw new Error("User not found");
   const lang = await isRu(ctx)
-  const text = lang
-    ? "🔮 О, добрый молодец! Пошли мне свой голос, и я, волшебным образом, буду говорить с тобой твоим собственным голосом, словно из сказки."
-    : "🔮 Please send me a voice message, and I will use it to create a voice avatar that speaks in your own voice.";
+  ctx.reply(lang ? "Чтобы использовать данную функцию, необходимо приобрести уровень water 🌊" : "To use this function, you need to purchase the water level 🌊")
+})
 
-  ctx.reply(text);
-});
+botAiKoshey.command("brain", async (ctx) => {
+  console.log("brain");
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  ctx.reply(lang ? "Чтобы использовать данную функцию, необходимо приобрести уровень water 🌊" : "To use this function, you need to purchase the water level 🌊")
+})
 
 botAiKoshey.on("message:voice", async (ctx) => {
-  const voice = ctx.msg.voice;
-  console.log(voice, "voice");
-  const fileId = voice.file_id;
-  // Получаем файл голосового сообщения
-  const file = await ctx.api.getFile(fileId);
-  const filePath = file.file_path;
-  const fileUrl = `https://api.telegram.org/file/bot${AI_KOSHEY}/${filePath}`;
+  // const voice = ctx.msg.voice;
+  // console.log(voice, "voice");
+  // const fileId = voice.file_id;
+  // // Получаем файл голосового сообщения
+  // const file = await ctx.api.getFile(fileId);
+  // const filePath = file.file_path;
+  // const fileUrl = `https://api.telegram.org/file/bot${AI_KOSHEY}/${filePath}`;
 
-  console.log(fileUrl, "fileUrl");
-  // Отправляем файл в ElevenLabs для создания нового голоса
-  const telegram_id = ctx.from?.id.toString();
-  const username = ctx.from?.username;
-  if (!username) throw new Error("No username");
+  // console.log(fileUrl, "fileUrl");
+  // // Отправляем файл в ElevenLabs для создания нового голоса
+  // const telegram_id = ctx.from?.id.toString();
+  // const username = ctx.from?.username;
+  // if (!username) throw new Error("No username");
 
-  const voiceId = await createVoiceSyncLabs({
-    fileUrl,
-    username
-  });
-  console.log(voiceId, "voiceId");
-  if (voiceId) {
-    await ctx.reply(`Голос успешно создан! Voice ID: ${voiceId}`);
-    await updateUser(telegram_id, { voice_id_synclabs: voiceId });
-  } else {
-    await ctx.reply("Ошибка при создании голоса.");
-  }
+  // const voiceId = await createVoiceSyncLabs({
+  //   fileUrl,
+  //   username
+  // });
+  // console.log(voiceId, "voiceId");
+  // if (voiceId) {
+  //   await ctx.reply(`Голос успешно создан! Voice ID: ${voiceId}`);
+  //   await updateUser(telegram_id, { voice_id_synclabs: voiceId });
+  // } else {
+  //   await ctx.reply("Ошибка при создании голоса.");
+  // }
 });
 
 botAiKoshey.on("message:text", async (ctx: Context) => {
@@ -1296,7 +1313,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
       }
     }
   }
-  if (callbackData.startsWith("create_profile")) {
+  if (callbackData.startsWith("create_soul")) {
     if (ctx.callbackQuery.from.id) {
       console.log("editMessageReplyMarkup")
       await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } }); 
@@ -1521,7 +1538,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 await botAiKoshey.api.setMyCommands([
   {
     command: "/start",
-    description: "Start chatting with Ai Koshey",
+    description: "🚀 Start chatting with Ai Koshey",
   },
   // {
   //   command: "/avatar",
@@ -1529,20 +1546,32 @@ await botAiKoshey.api.setMyCommands([
   // },
   {
     command: "/course",
-    description: "Start the course",
+    description: "📚 Start the course",
   },
   {
     command: "/language",
-    description: "Select language",
+    description: "🌐 Select language",
+  },
+  {
+    command: "/soul",
+    description: "🆔 Fill your avatar's soul",
+  },
+  {
+    command: "/face",
+    description: "🤓 Add avatar's face",
+  },
+  {
+    command: "/brain",
+    description: "🧠 Add avatar's brain",
   },
   // {
   //   command: "/text_to_speech",
   //   description: "Convert text to speech",
   // },
-  // {
-  //   command: "/voice",
-  //   description: "Create voice ai-avatar",
-  // },
+  {
+    command: "/voice",
+    description: "🎤 Add avatar's voice",
+  },
   // {
   //   command: "/reset_voice",
   //   description: "Reset voice ai-avatar",
