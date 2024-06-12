@@ -36,7 +36,6 @@ import {
 } from "../_shared/supabase/passport.ts";
 import { PassportUser, RoomNode } from "../_shared/types/index.ts";
 import {
-  createVoice,
   createVoiceMessage,
   createVoiceSyncLabs,
   getAiFeedbackFromSupabase,
@@ -615,7 +614,7 @@ botAiKoshey.on("message:voice", async (ctx) => {
 
   const voiceId = await createVoiceSyncLabs({
     fileUrl,
-    username
+    username,
   });
   console.log(voiceId, "voiceId");
   if (voiceId) {
