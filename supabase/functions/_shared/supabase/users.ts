@@ -386,7 +386,7 @@ export async function getUsernameByTelegramId(telegram_id: string, ctx: any, lan
     return data?.username || null;
   } catch (error) {
     console.error("Error getUsernameByTelegramId: " + error)
-    return null 
+    return telegram_id 
   }
 };
 
