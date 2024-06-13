@@ -61,6 +61,7 @@ export async function updateResult(
       .upsert({ user_id, [language]: value }, { onConflict: "user_id" });
 
     if (response.error) {
+      console.log(response.error, "response.error");
       throw new Error("Error updateResult: " + response.error);
     }
 

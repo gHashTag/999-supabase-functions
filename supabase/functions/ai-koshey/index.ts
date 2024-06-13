@@ -7,6 +7,7 @@ import {
   HttpError,
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
+import { checkSubscription } from "../check-subscription.ts";
 import { AI_KOSHEY, delay } from "../_shared/constants.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import {
@@ -201,12 +202,12 @@ const menuButton = async (ctx: Context) => {
   const menuButton = [
     [
       {
-        text: `💧 ${lang ? "Вода" : "Water"}`,
-        callback_data: "water",
-      },
-      {
         text: `🔥 ${lang ? "Огонь" : "Fire"}`,
         callback_data: "fire",
+      },
+      {
+        text: `💧 ${lang ? "Вода" : "Water"}`,
+        callback_data: "water",
       },
       {
         text: `🎺 ${lang ? "Медные трубы" : "Copper pipes"}`,
@@ -223,18 +224,66 @@ botAiKoshey.command("course", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   if (!ctx.from) throw new Error("User not found");
   const lang = await isRu(ctx)
-  await ctx.reply(
-    lang
-      ? `Чтобы начать тест, нажмите кнопку ниже!`
-      : `To start the test, click the button below!`,
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Start test!", callback_data: "start_test" }],
-        ],
-      },
-    },
-  );
+    try {
+      const questionContext = {
+        lesson_number: 1,
+        subtopic: 1,
+      };
+
+      const questions = await getQuestion({
+        ctx: questionContext,
+        language: "automation",
+      });
+      if (questions.length > 0) {
+        const {
+          topic: ruTopic,
+          image_lesson_url,
+          topic_en: enTopic,
+        } = questions[0];
+
+        const user_id = await getUid(ctx.from?.username || "");
+        if (!user_id) {
+          ctx.reply(lang ? "Вы не зарегестрированы." : "You are not registered.");
+          return;
+        }
+        const topic = lang ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+        // Формируем сообщение
+        const messageText =
+          `${topic}\n\n<i><u>${lang ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${lang ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
+
+        // Формируем кнопки
+        const inlineKeyboard = [
+          [{
+            text: lang ? "Перейти к вопросу" : "Go to the question",
+            callback_data: `automation_01_01`,
+          }],
+        ];
+
+        if (image_lesson_url) {
+          // Отправляем сообщение
+          await ctx.replyWithPhoto(image_lesson_url || "", {
+            caption: messageText,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        } else {
+          await ctx.reply(messageText, {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        }
+      } else {
+        await ctx.reply(lang ? "Вопросы не найдены." : "No questions found.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
 });
 
 botAiKoshey.command("post", async (ctx) => {
@@ -1007,10 +1056,6 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     callbackData.startsWith("start_test") ||
     callbackData.startsWith("automation")
   ) {
-    if (ctx.callbackQuery.from.id) {
-      console.log("editMessageReplyMarkup")
-      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } }); 
-    }
     if (callbackData === "start_test") {
       try {
         console.log(`start_test`)
@@ -1172,6 +1217,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
     if (isHaveAnswer) {
       try {
+        if (ctx.callbackQuery.from.id) {
+          console.log("editMessageReplyMarkup")
+          await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } }); 
+        }
         const [language, lesson_number, subtopic, answer] = callbackData.split(
           "_",
         );
@@ -1184,8 +1233,27 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         if (questions.length > 0) {
           const {
             correct_option_id,
+            id
           } = questions[0];
 
+          if (id === 5) {
+            const isSubscription = await checkSubscription(
+              ctx,
+              ctx.from?.id,
+              "-1002228291515"
+            );
+            if (!isSubscription) {
+              await ctx.reply(lang ? "Вы не подписаны на канал. Чтобы продолжить тест, нужно подписаться 👁‍🗨" : "You are not subscribed to the channel. To continue the test, you need to subscribe to the channel 👁‍🗨",
+                {
+                  reply_markup: { inline_keyboard: [
+                    [{ text: lang ? "👁‍🗨 Подписаться" : "👁‍🗨 Subscribe", url: "https://t.me/ai_koshey999nft" }],
+                    [{ text: lang ? "📚 Продолжить тест" : "📚 Continue the test", callback_data: callbackData }],
+                  ] }
+                }
+              );
+              return;
+            }
+          }
           const user_id = await getUid(ctx.callbackQuery.from.username || "");
           if (!user_id) {
             await ctx.reply(lang ? "Пользователь не найден." : "User not found.");
