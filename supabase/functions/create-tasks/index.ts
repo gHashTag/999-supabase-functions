@@ -121,6 +121,15 @@ Deno.serve(async (req) => {
 
   try {
     if (type === "transcription.success") {
+      // new Response(
+      //   JSON.stringify({
+      //     message: "transcription.success",
+      //   }),
+      //   {
+      //     status: 200,
+      //     headers: { ...corsHeaders },
+      //   },
+      // );
       const recording_id = data.recording_id;
       if (!recording_id) throw new Error("recording_id is null");
 
@@ -131,22 +140,50 @@ Deno.serve(async (req) => {
         console.log(transcriptTextPresignedUrl, "transcriptTextPresignedUrl");
 
         const transcriptResponse = await fetch(transcriptTextPresignedUrl);
+        console.log(transcriptResponse, "transcriptResponse");
+        if (!transcriptResponse.ok) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "transcriptResponse is not ok",
+          );
+        }
 
         const transcription = await transcriptResponse.text();
+        console.log(transcription, "transcription");
+        if (!transcription) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "transcription is null",
+          );
+        }
 
         const summaryJsonPresignedUrl = data.summary_json_presigned_url;
         console.log(summaryJsonPresignedUrl, "summaryJsonPresignedUrl");
+        if (!summaryJsonPresignedUrl) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "summaryJsonPresignedUrl is null",
+          );
+        }
+        console.log(summaryJsonPresignedUrl, "summaryJsonPresignedUrl");
 
         const summaryJSONResponse = await fetch(summaryJsonPresignedUrl);
+        console.log(summaryJSONResponse, "summaryJSONResponse");
         if (!summaryJSONResponse.ok) {
           await bugCatcherRequest(
             "create-tasks",
             "summaryJSONResponse is not ok",
           );
-          throw new Error("summaryJSONResponse is not ok");
         }
 
         const summaryResponse = await summaryJSONResponse.json();
+        console.log(summaryResponse, "summaryResponse");
+        if (!summaryResponse.sections) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "summaryJSONResponse is not ok",
+          );
+        }
 
         const summarySection = summaryResponse.sections.find(
           (section: {
@@ -156,16 +193,45 @@ Deno.serve(async (req) => {
             paragraph: string;
           }) => section.title === "Short Summary",
         );
+        console.log(summarySection, "summarySection");
+        if (!summarySection) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "summarySection is null",
+          );
+        }
 
-        const summary_short = summarySection ? summarySection.paragraph : "";
+        const summary_short = summarySection.paragraph;
+        console.log(summary_short, "summary_short");
+
+        if (!summary_short) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "summary_short is null",
+          );
+        }
         const titleWithEmoji = await createEmoji(
           summary_short,
         );
+        console.log(titleWithEmoji, "titleWithEmoji");
+
+        if (!titleWithEmoji) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "titleWithEmoji is null",
+          );
+        }
 
         if (!data.room_id) throw new Error("room_id is null");
         const users = await getPassportByRoomId(data.room_id);
+        console.log(users, "users");
 
-        if (!users) throw new Error("users is null");
+        if (!users) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "users is null",
+          );
+        }
 
         const roomAsset: TranscriptionAsset = {
           ...data,
@@ -176,7 +242,15 @@ Deno.serve(async (req) => {
           user_id: users[0].user_id,
         };
         console.log(roomAsset, "roomAsset");
+        if (!roomAsset) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "roomAsset is null",
+          );
+        }
         await setRoomAsset(roomAsset);
+
+        console.log(transcription, "transcription");
 
         const systemPrompt =
           `Answer with emoticons. You are an AI assistant working at dao999nft. Your goal is to extract all tasks from the text, the maximum number of tasks, the maximum number of tasks, the maximum number of tasks, the maximum number of tasks, the maximum number of tasks, assign them to executors using the colon sign: assignee, title,  description (Example: <b>Ai Koshey</b>: 💻 Develop functional requirements) If no tasks are detected, add one task indicating that no tasks were found. Provide your response as a JSON object`;
@@ -186,10 +260,21 @@ Deno.serve(async (req) => {
           systemPrompt,
         );
         console.log(preparedTasks, "preparedTasks");
-        if (!preparedTasks) throw new Error("preparedTasks is null");
+        if (!preparedTasks) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "preparedTasks is null",
+          );
+        }
 
         const preparedUsers = getPreparedUsers(users);
-        if (!preparedUsers) throw new Error("preparedUsers is null");
+        console.log(preparedUsers, "preparedUsers");
+        if (!preparedUsers) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "preparedUsers is null",
+          );
+        }
 
         const prompt = `add the 'user_id' from of ${
           JSON.stringify(
@@ -210,9 +295,16 @@ Deno.serve(async (req) => {
               description: "Capture the Universe and a couple of stars in the Aldebaran constellation"
           }]) Provide your response as a JSON object and always response on English`;
 
-        console.log(preparedTasks, "preparedTasks");
         const tasks = await createChatCompletionJson(prompt);
-        const tasksArray = tasks && JSON.parse(tasks).tasks;
+        console.log(tasks, "tasks");
+        if (!tasks) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "tasks is null",
+          );
+          throw new Error("tasks is null");
+        }
+        const tasksArray = JSON.parse(tasks).tasks;
         console.log(tasksArray, "tasksArray");
 
         if (!Array.isArray(tasksArray)) {
@@ -225,16 +317,50 @@ Deno.serve(async (req) => {
           user_id: task.user_id || "e3939cb3-3198-4f52-8bfb-5728cc3dba84",
         }));
         console.log(newTasks, "newTasks");
+        if (!newTasks) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "newTasks is null",
+          );
+          throw new Error("newTasks is null");
+        }
+
         const { roomData, isExistRoom } = await getRoomById(data?.room_id);
-        if (!isExistRoom || !roomData) throw new Error("Room not found");
+        console.log(roomData, "roomData");
+        console.log(isExistRoom, "isExistRoom");
+        if (!isExistRoom || !roomData) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "Room not found",
+          );
+          throw new Error("Room not found");
+        }
 
         const { language_code, id, token, description } = roomData;
 
         const workspace_id = description;
         console.log(workspace_id, "workspace_id");
-        if (!id) throw new Error("id is null");
-        if (!workspace_id) throw new Error("workspace_id is null");
-        if (!token) throw new Error("token is null");
+        if (!id) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "id is null",
+          );
+          throw new Error("id is null");
+        }
+        if (!workspace_id) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "workspace_id is null",
+          );
+          throw new Error("workspace_id is null");
+        }
+        if (!token) {
+          await bugCatcherRequest(
+            "create-tasks",
+            "token is null",
+          );
+          throw new Error("token is null");
+        }
 
         const workspace = await getWorkspaceById(workspace_id);
         let workspace_name;
@@ -290,7 +416,11 @@ Deno.serve(async (req) => {
           const summary_short_url =
             `${SITE_URL}/${passport.username}/${passport.user_id}/${workspace_id}/${room_id}/${recording_id}`;
 
+          console.log(summary_short_url, "summary_short_url");
+          console.log(token, "token");
+
           const bot = new Bot(token);
+          console.log(bot, "bot");
 
           const buttons = [
             {
@@ -302,7 +432,7 @@ Deno.serve(async (req) => {
             },
           ];
           if (!passport.rooms?.chat_id) throw new Error("chat_id is null");
-
+          console.log(passport.rooms?.chat_id, "passport.rooms?.chat_id");
           await bot.api.sendMessage(
             Number(passport.rooms?.chat_id),
             `🚀 ${translated_short}`,
@@ -401,6 +531,7 @@ Deno.serve(async (req) => {
       },
     );
   }
+
   //return new Response("Endpoint not found", { status: 404 });
 });
 

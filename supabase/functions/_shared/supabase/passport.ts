@@ -160,7 +160,6 @@ export async function getPassportByRoomId(
 
     if (error) {
       await bugCatcherRequest("getPassportByRoomId", error);
-      throw new Error("Error getPassportByRoomId: " + error);
     }
 
     if (data === null) {
