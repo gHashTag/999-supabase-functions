@@ -412,6 +412,24 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   if (!ctx.from) throw new Error("User not found");
   console.log(await isRu(ctx), "isRu")
   const lang = await isRu(ctx)
+
+
+  const isSubscription = await checkSubscription(
+    ctx,
+    ctx.from?.id,
+    "-1002228291515"
+  );
+  if (!isSubscription) {
+    await ctx.reply(lang ? "Вы не подписаны на канал. Чтобы продолжить тест, нужно подписаться 👁‍🗨" : "You are not subscribed to the channel. To continue the test, you need to subscribe to the channel 👁‍🗨",
+      {
+        reply_markup: { inline_keyboard: [
+          [{ text: lang ? "👁‍🗨 Подписаться" : "👁‍🗨 Subscribe", url: "https://t.me/ai_koshey999nft" }],
+        ] }
+        }
+      );
+      return;
+    }
+
   if(!ctx.from.username) {
     await ctx.reply(lang ? "🔍 Для использования бота, необходимо иметь username" : "🔍 To use the bot, you must have a username")
     return
@@ -1235,25 +1253,6 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             correct_option_id,
             id
           } = questions[0];
-
-          if (id === 5) {
-            const isSubscription = await checkSubscription(
-              ctx,
-              ctx.from?.id,
-              "-1002228291515"
-            );
-            if (!isSubscription) {
-              await ctx.reply(lang ? "Вы не подписаны на канал. Чтобы продолжить тест, нужно подписаться 👁‍🗨" : "You are not subscribed to the channel. To continue the test, you need to subscribe to the channel 👁‍🗨",
-                {
-                  reply_markup: { inline_keyboard: [
-                    [{ text: lang ? "👁‍🗨 Подписаться" : "👁‍🗨 Subscribe", url: "https://t.me/ai_koshey999nft" }],
-                    [{ text: lang ? "📚 Продолжить тест" : "📚 Continue the test", callback_data: callbackData }],
-                  ] }
-                }
-              );
-              return;
-            }
-          }
           const user_id = await getUid(ctx.callbackQuery.from.username || "");
           if (!user_id) {
             await ctx.reply(lang ? "Пользователь не найден." : "User not found.");
