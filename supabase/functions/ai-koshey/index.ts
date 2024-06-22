@@ -51,6 +51,7 @@ import {
   getQuestion,
   updateProgress,
   updateResult,
+  getTop10Users
 } from "../_shared/supabase/progress.ts";
 import { pathIncrement } from "../path-increment.ts";
 
@@ -413,17 +414,17 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   console.log(await isRu(ctx), "isRu")
   const lang = await isRu(ctx)
 
-
+  const chatIdSubscription = lang ? "-1002012841987" : "-1002015840738"
   const isSubscription = await checkSubscription(
     ctx,
     ctx.from?.id,
-    "-1002228291515"
+    chatIdSubscription
   );
   if (!isSubscription) {
     await ctx.reply(lang ? "Вы не подписаны на канал. Чтобы продолжить тест, нужно подписаться 👁‍🗨" : "You are not subscribed to the channel. To continue the test, you need to subscribe to the channel 👁‍🗨",
       {
         reply_markup: { inline_keyboard: [
-          [{ text: lang ? "👁‍🗨 Подписаться" : "👁‍🗨 Subscribe", url: "https://t.me/ai_koshey999nft" }],
+          [{ text: lang ? "👁‍🗨 Подписаться" : "👁‍🗨 Subscribe", url: lang ? "https://t.me/ai_koshey999nft" : "https://t.me/ai_koshey_en" }],
         ] }
         }
       );
@@ -624,6 +625,28 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   }
 });
 
+botAiKoshey.command("buy", async (ctx) => {
+  const lang = await isRu(ctx)
+  ctx.reply(lang ? "🤝 Выберите уровень подписки, который выхотите приобрести" : "🤝 Select the level of subscription you want to purchase", {
+    reply_markup: {
+      inline_keyboard: [[{ text: lang ? "🔥 Огонь" : "🔥 Fire", callback_data: "buy_fire" }], [{ text: lang ? "🌊 Вода" : "🌊 Water", callback_data: "buy_water" }], [{ text: lang ? "🎺 Медные трубы" : "🎺 Copper pipes", callback_data: "buy_copper_pipes" }]],
+    },
+  })
+  return;
+});
+
+botAiKoshey.on("pre_checkout_query", (ctx) => {
+  ctx.answerPreCheckoutQuery(true)
+  return;
+});
+
+botAiKoshey.on("message:successful_payment", async (ctx) => {
+  const lang = await isRu(ctx)
+  console.log("ctx 646(succesful_payment)", ctx)
+  ctx.reply(lang ? "🤝 Спасибо за покупку!" : "🤝 Thank you for the purchase!");
+  return;
+});
+
 botAiKoshey.command("language", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   if (!ctx.from) throw new Error("User not found");
@@ -730,6 +753,21 @@ botAiKoshey.command("brain", async (ctx) => {
   if (!ctx.from) throw new Error("User not found");
   const lang = await isRu(ctx)
   ctx.reply(lang ? "Чтобы использовать данную функцию, необходимо приобрести уровень water 🌊" : "To use this function, you need to purchase the water level 🌊")
+})
+
+botAiKoshey.command("top", async (ctx) => {
+  console.log("top");
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  const top10Users = await getTop10Users();
+  console.log(top10Users, "top10Users");
+  const leaderboardText = top10Users.map((user, index) => {
+    return `${index + 1}. ${user.username} - ${user.all} $IGLA`;
+  }).join('\n');
+
+  await ctx.reply(lang ? `Топ 10 пользователей:\n${leaderboardText}` : `Top 10 users:\n${leaderboardText}`);
+
 })
 
 botAiKoshey.on("message:voice", async (ctx) => {
@@ -1053,6 +1091,41 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
   console.log(ctx);
   const isHaveAnswer = callbackData.split("_").length === 4;
 
+  if (callbackData.startsWith("buy")) {
+    if (callbackData.endsWith("fire")) {
+      await ctx.replyWithInvoice(
+        lang ? "🔥 Огонь" : "🔥 Fire",
+        "Вы получить подписку уровня 'Огонь'",
+        "fire",
+        "", // Оставьте пустым для цифровых товаров
+        "XTR", // Используйте валюту Telegram Stars
+        [{ label: "Цена", amount: 1170 }], // Цена в центах (10.00 Stars)
+      );
+      return
+    }
+    if (callbackData.endsWith("water")) {
+      await ctx.replyWithInvoice(
+        lang ? "🌊 Вода" : "🌊 Water",
+        "Вы получить подписку уровня 'Вода'",
+        "water",
+        "", // Оставьте пустым для цифровых товаров
+        "XTR", // Используйте валюту Telegram Stars
+        [{ label: "Цена", amount: 12870 }], // Цена в центах (10.00 Stars)
+      );
+      return
+    }
+    if (callbackData.endsWith("copper_pipes")) {
+      await ctx.replyWithInvoice(
+        lang ? "🎺 Медные трубы" : "🎺 Copper pipes",
+        "Вы получить подписку уровня 'Медные трубы'",
+        "copper_pipes",
+        "", // Оставьте пустым для цифровых товаров
+        "XTR", // Используйте валюту Telegram Stars
+        [{ label: "Цена", amount: 129870 }], // Цена в центах (10.00 Stars)
+      );
+      return
+    }
+  }
   if (callbackData === "select_russian") {
     if (ctx.callbackQuery.from.id) {
     console.log("editMessageReplyMarkup")
@@ -1639,6 +1712,14 @@ await botAiKoshey.api.setMyCommands([
     command: "/voice",
     description: "🎤 Add avatar's voice",
   },
+  {
+    command: "/top",
+    description: "🏆 Top 10 users",
+  },
+  // {
+  //   command: "/buy",
+  //   description: "🛒 Buy subscription",
+  // },
   // {
   //   command: "/reset_voice",
   //   description: "Reset voice ai-avatar",

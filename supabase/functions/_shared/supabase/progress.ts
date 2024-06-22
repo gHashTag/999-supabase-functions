@@ -252,3 +252,42 @@ export async function getCorrects(
     throw new Error("Error getCorrects(254): " + error);
   }
 }
+
+export async function getTop10Users(): Promise<any[]> {
+  try {
+    const { data: topUsers, error: topUsersError } = await supabase
+      .from("progress")
+      .select("user_id, all")
+      .order("all", { ascending: false })
+      .limit(10);
+
+    if (topUsersError) {
+      throw new Error("Error fetching top users: " + topUsersError.message);
+    }
+
+    const userIds = topUsers.map((user) => user.user_id);
+
+    const { data: userInfo, error: userInfoError } = await supabase
+      .from("users")
+      .select("username, user_id")
+      .in("user_id", userIds);
+
+    if (userInfoError) {
+      throw new Error("Error fetching user info: " + userInfoError.message);
+    }
+    console.log(userInfo, "userInfo")
+
+    const result = topUsers.map((user) => {
+      const userInfoData = userInfo.find((info) => info.user_id === user.user_id);
+      return {
+        username: userInfoData?.username,
+        all: user.all,
+      };
+    });
+
+    console.log(result)
+    return result;
+  } catch (error) {
+    throw new Error("Error getTop10Users: " + error);
+  }
+}
