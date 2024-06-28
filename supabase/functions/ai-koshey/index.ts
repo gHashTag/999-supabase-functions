@@ -8,7 +8,7 @@ import {
 } from "https://deno.land/x/grammy@v1.8.3/mod.ts";
 
 import { checkSubscription } from "../check-subscription.ts";
-import { AI_KOSHEY, delay } from "../_shared/constants.ts";
+import { delay } from "../_shared/constants.ts";
 import { createUser } from "../_shared/nextapi/index.ts";
 import {
   AiKosheyContext,
@@ -241,6 +241,7 @@ botAiKoshey.command("course", async (ctx) => {
           topic: ruTopic,
           image_lesson_url,
           topic_en: enTopic,
+          url
         } = questions[0];
 
         const user_id = await getUid(ctx.from?.username || "");
@@ -265,6 +266,318 @@ botAiKoshey.command("course", async (ctx) => {
           }],
         ];
 
+        if (url && lang) {
+          console.log(url, "url");
+          await ctx.replyWithVideoNote(url);
+        }
+        if (image_lesson_url) {
+          // Отправляем сообщение
+          await ctx.replyWithPhoto(image_lesson_url || "", {
+            caption: messageText,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        } else {
+          await ctx.reply(messageText, {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        }
+      } else {
+        await ctx.reply(lang ? "Вопросы не найдены." : "No questions found.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+});
+
+botAiKoshey.command("javascript", async (ctx) => {
+  console.log("javascript");
+  const theme = ctx.message?.text.substring(1)
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  if (!theme) {
+    await ctx.reply(lang ? "Тема не найдена." : "Theme not found.");
+    return;
+  }
+    try {
+      const questionContext = {
+        lesson_number: 1,
+        subtopic: 1,
+      };
+
+      const questions = await getQuestion({
+        ctx: questionContext,
+        language: theme,
+      });
+      if (questions.length > 0) {
+        const {
+          topic: ruTopic,
+          image_lesson_url,
+          topic_en: enTopic,
+          url
+        } = questions[0];
+
+        const user_id = await getUid(ctx.from?.username || "");
+        if (!user_id) {
+          ctx.reply(lang ? "Вы не зарегестрированы." : "You are not registered.");
+          return;
+        }
+        const topic = lang ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+        // Формируем сообщение
+        const messageText =
+          `${topic}\n\n<i><u>${lang ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${lang ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
+
+        // Формируем кнопки
+        const inlineKeyboard = [
+          [{
+            text: lang ? "Перейти к вопросу" : "Go to the question",
+            callback_data: `${theme}_01_01`,
+          }],
+        ];
+
+        if (url && lang) {
+          console.log(url, "url");
+          await ctx.replyWithVideoNote(url);
+        }
+        if (image_lesson_url) {
+          // Отправляем сообщение
+          await ctx.replyWithPhoto(image_lesson_url || "", {
+            caption: messageText,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        } else {
+          await ctx.reply(messageText, {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        }
+      } else {
+        await ctx.reply(lang ? "Вопросы не найдены." : "No questions found.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+});
+
+botAiKoshey.command("typescript", async (ctx) => {
+  console.log("typescript");
+  const theme = ctx.message?.text.substring(1)
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  if (!theme) {
+    await ctx.reply(lang ? "Тема не найдена." : "Theme not found.");
+    return;
+  }
+    try {
+      const questionContext = {
+        lesson_number: 1,
+        subtopic: 1,
+      };
+
+      const questions = await getQuestion({
+        ctx: questionContext,
+        language: theme,
+      });
+      if (questions.length > 0) {
+        const {
+          topic: ruTopic,
+          image_lesson_url,
+          topic_en: enTopic,
+          url
+        } = questions[0];
+
+        const user_id = await getUid(ctx.from?.username || "");
+        if (!user_id) {
+          ctx.reply(lang ? "Вы не зарегестрированы." : "You are not registered.");
+          return;
+        }
+        const topic = lang ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+        // Формируем сообщение
+        const messageText =
+          `${topic}\n\n<i><u>${lang ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${lang ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
+
+        // Формируем кнопки
+        const inlineKeyboard = [
+          [{
+            text: lang ? "Перейти к вопросу" : "Go to the question",
+            callback_data: `${theme}_01_01`,
+          }],
+        ];
+
+        if (url && lang) {
+          console.log(url, "url");
+          await ctx.replyWithVideoNote(url);
+        }
+        if (image_lesson_url) {
+          // Отправляем сообщение
+          await ctx.replyWithPhoto(image_lesson_url || "", {
+            caption: messageText,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        } else {
+          await ctx.reply(messageText, {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        }
+      } else {
+        await ctx.reply(lang ? "Вопросы не найдены." : "No questions found.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+});
+
+botAiKoshey.command("reactnative", async (ctx) => {
+  console.log("reactnative");
+  const theme = ctx.message?.text.substring(1)
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  if (!theme) {
+    await ctx.reply(lang ? "Тема не найдена." : "Theme not found.");
+    return;
+  }
+    try {
+      const questionContext = {
+        lesson_number: 1,
+        subtopic: 1,
+      };
+
+      const questions = await getQuestion({
+        ctx: questionContext,
+        language: theme,
+      });
+      if (questions.length > 0) {
+        const {
+          topic: ruTopic,
+          image_lesson_url,
+          topic_en: enTopic,
+          url
+        } = questions[0];
+
+        const user_id = await getUid(ctx.from?.username || "");
+        if (!user_id) {
+          ctx.reply(lang ? "Вы не зарегестрированы." : "You are not registered.");
+          return;
+        }
+        const topic = lang ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+        // Формируем сообщение
+        const messageText =
+          `${topic}\n\n<i><u>${lang ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${lang ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
+
+        // Формируем кнопки
+        const inlineKeyboard = [
+          [{
+            text: lang ? "Перейти к вопросу" : "Go to the question",
+            callback_data: `${theme}_01_01`,
+          }],
+        ];
+
+        if (url && lang) {
+          console.log(url, "url");
+          await ctx.replyWithVideoNote(url);
+        }
+        if (image_lesson_url) {
+          // Отправляем сообщение
+          await ctx.replyWithPhoto(image_lesson_url || "", {
+            caption: messageText,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        } else {
+          await ctx.reply(messageText, {
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: inlineKeyboard },
+          });
+          return;
+        }
+      } else {
+        await ctx.reply(lang ? "Вопросы не найдены." : "No questions found.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+});
+
+botAiKoshey.command("python", async (ctx) => {
+  console.log("python");
+  const theme = ctx.message?.text.substring(1)
+  await ctx.replyWithChatAction("typing");
+  if (!ctx.from) throw new Error("User not found");
+  const lang = await isRu(ctx)
+  if (!theme) {
+    await ctx.reply(lang ? "Тема не найдена." : "Theme not found.");
+    return;
+  }
+    try {
+      const questionContext = {
+        lesson_number: 1,
+        subtopic: 1,
+      };
+
+      const questions = await getQuestion({
+        ctx: questionContext,
+        language: theme,
+      });
+      if (questions.length > 0) {
+        const {
+          topic: ruTopic,
+          image_lesson_url,
+          topic_en: enTopic,
+          url
+        } = questions[0];
+
+        const user_id = await getUid(ctx.from?.username || "");
+        if (!user_id) {
+          ctx.reply(lang ? "Вы не зарегестрированы." : "You are not registered.");
+          return;
+        }
+        const topic = lang ? ruTopic : enTopic;
+        const allAnswers = await getCorrects({
+          user_id: user_id.toString(),
+          language: "all",
+        });
+        // Формируем сообщение
+        const messageText =
+          `${topic}\n\n<i><u>${lang ? "Теперь мы предлагаем вам закрепить полученные знания." : "Now we are offering you to reinforce the acquired knowledge."}</u></i>\n\n<b>${lang ? "Total: " : "Total: "}${allAnswers} $IGLA</b>`;
+
+        // Формируем кнопки
+        const inlineKeyboard = [
+          [{
+            text: lang ? "Перейти к вопросу" : "Go to the question",
+            callback_data: `${theme}_01_01`,
+          }],
+        ];
+
+        if (url && lang) {
+          console.log(url, "url");
+          await ctx.replyWithVideoNote(url);
+        }
         if (image_lesson_url) {
           // Отправляем сообщение
           await ctx.replyWithPhoto(image_lesson_url || "", {
@@ -349,38 +662,10 @@ botAiKoshey.command("post", async (ctx) => {
   }
 });
 
-const botLinks = async (ctx: Context, isRu: boolean) => {
-  await ctx.reply(
-    isRu
-      ? "Наши боты по обучению искусственному интеллекту, JavaScript, TypeScript, React, Python, Tact, предоставляют уникальную возможность бесплатно заработать наш токен знаний $IGLA.\nВ отличие от других кликеров, наши боты позволяют пользователям проводить время с пользой, обучаясь востребованным навыкам, которые могут значительно повысить вашу профессиональную ценность на рынке труда"
-      : "Our AI training bots, JavaScript, TypeScript, React, Python, Tact, provide a unique opportunity to earn our $IGLA knowledge token for free.\nUnlike other clickers, our bots allow users to spend time profitably learning in-demand skills who can significantly increase your professional value on the labor market",
-    {
-      reply_markup: {
-        inline_keyboard: [[
-          // { text: "Automatization", url: "https://t.me/bot1" },
-          { text: "TypeScript", url: "https://t.me/typescript_dev_bot" },
-          { text: "Python", url: "https://t.me/python_ai_dev_bot" },
-        ], [{ text: "React", url: "https://t.me/react_native_dev_bot" }, {
-          text: "JavaScript",
-          url: "https://t.me/javascriptcamp_bot",
-        } // { text: "Tact", url: "https://t.me/bot6" },
-        ], [
-          {
-            text: "Ai Koshey",
-            callback_data: "start_test",
-          },
-        ]],
-      },
-    },
-  );
-  return;
-};
-
 botAiKoshey.command("bots", async (ctx) => {
   await ctx.replyWithChatAction("typing");
   if (!ctx.from) throw new Error("User not found");
   const lang = await isRu(ctx)
-  await botLinks(ctx, lang);
   return;
 });
 
@@ -628,10 +913,38 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
 
 botAiKoshey.command("buy", async (ctx) => {
   const lang = await isRu(ctx)
-  ctx.reply(lang ? "🤝 Выберите уровень подписки, который выхотите приобрести" : "🤝 Select the level of subscription you want to purchase", {
+  ctx.reply(lang ? `<b>Огонь 🔥 - НейроСтарт - 432 ⭐️ в месяц</b>
+Чат с воспоминаниями + GPT-4o: Бот запоминает контекст и улучшает взаимодействие.
+Самостоятельное обучение: Курсы по нейросетям, JavaScript, TypeScript, React & React Native, Python.
+ИИ гуру ассистент: Доступ к виртуальному помощнику с использованием ИИ.
+Поддержка в чате: Помощь и ответы на вопросы в режиме реального времени.
+  
+<b>Вода 💧 - НейроБазис - Групповая сессия для начинающих - 4754 ⭐️ в месяц</b>
+Все, что в тарифе "Базовый Онлайн".
+Дополнительные ИИ функции: Включает в себя Чат GPT, Llama3, Mistral, HeyGen, Midjourney, Eleven Labs.
+4 групповые онлайн встречи с преподавателем: Еженедельные занятия, где можно задать вопросы и получить практические советы.
+  
+<b>Медные трубы 🎺 - НейроПродвинутый - Групповая сессия для продвинутых - 47 975 ⭐️ в месяц</b>
+Все, что в тарифе "Базовый Онлайн".
+12 групповых онлайн встреч с преподавателем: Интенсивное обучение с глубоким погружением в разработку телеграм ИИ ботов.`
+   : `<b>Fire 🔥 - NeuroStart - 432 ⭐️ per month</b>
+Chat with memories + GPT-4o: The bot remembers the context and improves interaction.
+Self-paced learning: Courses on neural networks, JavaScript, TypeScript, React & React Native, Python.
+AI guru assistant: Access to a virtual assistant using AI.
+Chat support: Help and answers to questions in real-time.
+   
+<b>Water 💧 - NeuroBasic - Group session for beginners - 4754 ⭐️ per month</b>
+Everything in the "Basic Online" plan.
+Additional AI features: Includes Chat GPT, Llama3, Mistral, HeyGen, Midjourney, Eleven Labs.
+4 group online sessions with an instructor: Weekly classes where you can ask questions and get practical advice.
+   
+<b>Copper Pipes 🎺 - NeuroAdvanced - Group session for advanced users - 47,975 ⭐️ per month</b>
+Everything in the "Basic Online" plan.
+12 group online sessions with an instructor: Intensive training with deep immersion in the development of Telegram AI bots.`, {
     reply_markup: {
       inline_keyboard: [[{ text: lang ? "🔥 Огонь" : "🔥 Fire", callback_data: "buy_fire" }], [{ text: lang ? "🌊 Вода" : "🌊 Water", callback_data: "buy_water" }], [{ text: lang ? "🎺 Медные трубы" : "🎺 Copper pipes", callback_data: "buy_copper_pipes" }]],
     },
+    parse_mode: "HTML",
   })
   return;
 });
@@ -1027,7 +1340,6 @@ botAiKoshey.on("message:text", async (ctx: Context) => {
                 inline_keyboard: await menuButton(ctx),
               },
             });
-            await botLinks(ctx, lang);
           }
           return;
         } else {
@@ -1151,10 +1463,12 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
   if (
     callbackData.startsWith("start_test") ||
-    callbackData.startsWith("automation")
+    callbackData.startsWith("automation") ||
+    callbackData.startsWith("javascript") 
   ) {
     if (callbackData === "start_test") {
       try {
+        const theme = callbackData.split("_")[1]
         console.log(`start_test`)
         const questionContext = {
           lesson_number: 1,
@@ -1163,7 +1477,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
 
         const questions = await getQuestion({
           ctx: questionContext,
-          language: "automation",
+          language: theme,
         });
         if (questions.length > 0) {
           const {
@@ -1190,7 +1504,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
           const inlineKeyboard = [
             [{
               text: lang ? "Перейти к вопросу" : "Go to the question",
-              callback_data: `automation_01_01`,
+              callback_data: `${theme}_01_01`,
             }],
           ];
 
@@ -1418,7 +1732,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
             });
             console.log(newQuestions, `newQuestions ai koshey for`);
             console.log(getQuestionContext, `getQuestionContext`);
-            const { topic: ruTopic, image_lesson_url, topic_en: enTopic } =
+            const { topic: ruTopic, image_lesson_url, topic_en: enTopic, url } =
               newQuestions[0];
             const topic = lang ? ruTopic : enTopic;
             // Формируем сообщение
@@ -1432,6 +1746,10 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
                 callback_data: newPath,
               }],
             ];
+            if (url && lang) {
+              console.log(url, "url");
+              await ctx.replyWithVideoNote(url);
+            }
             if (image_lesson_url) {
               // Отправляем сообщение
               await ctx.replyWithPhoto(image_lesson_url, {
@@ -1722,14 +2040,30 @@ await botAiKoshey.api.setMyCommands([
     command: "/top",
     description: "🏆 Top 10 users",
   },
-  // {
-  //   command: "/buy",
-  //   description: "🛒 Buy subscription",
-  // },
+  {
+    command: "/buy",
+    description: "🛒 Buy subscription",
+  },
   // {
   //   command: "/reset_voice",
   //   description: "Reset voice ai-avatar",
   // },
+  {
+    command: "/javascript",
+    description: "💻 Learn JavaScript",
+  },
+  {
+    command: "/typescript",
+    description: "💻 Learn TypeScript",
+  },
+  {
+    command: "/reactnative",
+    description: "📱 Learn React Native",
+  },
+  {
+    command: "/python",
+    description: "🐍 Learn Python",
+  },
 ]);
 
 botAiKoshey.catch((err) => {
