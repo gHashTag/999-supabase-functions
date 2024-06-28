@@ -962,7 +962,11 @@ botAiKoshey.on("message:successful_payment", async (ctx) => {
   const user_id = await getUid(ctx.from.username)
   if (!user_id) throw new Error("No user_id");
   await sendPaymentInfo(user_id, level)
-  ctx.reply(lang ? "🤝 Спасибо за покупку!" : "🤝 Thank you for the purchase!");
+  const levelForMessage = level === "fire" ? lang ? "🔥 Огонь" : "🔥 Fire" : level === "water" ? lang ? "💧 Вода" : "💧 Water" : lang ? "🎺 Медные трубы" : "🎺 Copper pipes"
+  await ctx.reply(lang ? "🤝 Спасибо за покупку!" : "🤝 Thank you for the purchase!");
+  const textToPost = lang ? `🪙 В казну тридевятого царства прибыло\n\n ${ctx.from.username} спасибо за покупку уровня ${levelForMessage}, добрый человек!` : `🪙 ${ctx.from.username} thank you for the purchase level ${levelForMessage}!`
+  await ctx.api.sendMessage("-1001476314188", textToPost)
+  await ctx.api.sendMessage("-1001729610573", textToPost)
   return;
 });
 
