@@ -54,6 +54,7 @@ import {
   getTop10Users
 } from "../_shared/supabase/progress.ts";
 import { pathIncrement } from "../path-increment.ts";
+import { sendPaymentInfo } from "../_shared/supabase/payments.ts";
 
 export type CreateUserT = {
   id: number;
@@ -414,7 +415,7 @@ botAiKoshey.command("start", async (ctx: AiKosheyContext) => {
   console.log(await isRu(ctx), "isRu")
   const lang = await isRu(ctx)
 
-  const chatIdSubscription = lang ? "-1002012841987" : "-1002015840738"
+  const chatIdSubscription = lang ? "-1002228291515" : "-1002015840738"
   const isSubscription = await checkSubscription(
     ctx,
     ctx.from?.id,
@@ -643,6 +644,11 @@ botAiKoshey.on("pre_checkout_query", (ctx) => {
 botAiKoshey.on("message:successful_payment", async (ctx) => {
   const lang = await isRu(ctx)
   console.log("ctx 646(succesful_payment)", ctx)
+  const level = ctx.message.successful_payment.invoice_payload
+  if (!ctx.from?.username) throw new Error("No username");
+  const user_id = await getUid(ctx.from.username)
+  if (!user_id) throw new Error("No user_id");
+  await sendPaymentInfo(user_id, level)
   ctx.reply(lang ? "🤝 Спасибо за покупку!" : "🤝 Thank you for the purchase!");
   return;
 });
@@ -1099,7 +1105,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         "fire",
         "", // Оставьте пустым для цифровых товаров
         "XTR", // Используйте валюту Telegram Stars
-        [{ label: "Цена", amount: 1170 }], // Цена в центах (10.00 Stars)
+        [{ label: "Цена", amount: 432 }],
       );
       return
     }
@@ -1110,7 +1116,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         "water",
         "", // Оставьте пустым для цифровых товаров
         "XTR", // Используйте валюту Telegram Stars
-        [{ label: "Цена", amount: 12870 }], // Цена в центах (10.00 Stars)
+        [{ label: "Цена", amount: 4754 }], // Цена в центах (10.00 Stars)
       );
       return
     }
@@ -1121,7 +1127,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
         "copper_pipes",
         "", // Оставьте пустым для цифровых товаров
         "XTR", // Используйте валюту Telegram Stars
-        [{ label: "Цена", amount: 129870 }], // Цена в центах (10.00 Stars)
+        [{ label: "Цена", amount: 47975 }], // Цена в центах (10.00 Stars)
       );
       return
     }
