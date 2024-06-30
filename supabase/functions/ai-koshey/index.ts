@@ -964,7 +964,7 @@ botAiKoshey.on("message:successful_payment", async (ctx) => {
   await sendPaymentInfo(user_id, level)
   const levelForMessage = level === "fire" ? lang ? "🔥 Огонь" : "🔥 Fire" : level === "water" ? lang ? "💧 Вода" : "💧 Water" : lang ? "🎺 Медные трубы" : "🎺 Copper pipes"
   await ctx.reply(lang ? "🤝 Спасибо за покупку!" : "🤝 Thank you for the purchase!");
-  const textToPost = lang ? `🪙 В казну тридевятого царства прибыло\n\n ${ctx.from.username} спасибо за покупку уровня ${levelForMessage}, добрый человек!` : `🪙 ${ctx.from.username} thank you for the purchase level ${levelForMessage}!`
+  const textToPost = lang ? `🪙 В казну тридевятого царства прибыло\n\n @${ctx.from.username} спасибо за покупку уровня ${levelForMessage}, добрый человек!` : `🪙 @${ctx.from.username} thank you for the purchase level ${levelForMessage}!`
   await ctx.api.sendMessage("-1001476314188", textToPost)
   await ctx.api.sendMessage("-1001729610573", textToPost)
   return;
@@ -1090,7 +1090,6 @@ botAiKoshey.command("top", async (ctx) => {
   }).join('\n');
 
   await ctx.reply(lang ? `Топ 10 пользователей:\n${leaderboardText}` : `Top 10 users:\n${leaderboardText}`);
-
 })
 
 botAiKoshey.on("message:voice", async (ctx) => {
@@ -1417,7 +1416,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     if (callbackData.endsWith("fire")) {
       await ctx.replyWithInvoice(
         lang ? "🔥 Огонь" : "🔥 Fire",
-        "Вы получить подписку уровня 'Огонь'",
+        lang ? "Вы получите подписку уровня 'Огонь'" : "You will receive a subscription to the 'Fire' level",
         "fire",
         "", // Оставьте пустым для цифровых товаров
         "XTR", // Используйте валюту Telegram Stars
@@ -1428,7 +1427,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     if (callbackData.endsWith("water")) {
       await ctx.replyWithInvoice(
         lang ? "🌊 Вода" : "🌊 Water",
-        "Вы получить подписку уровня 'Вода'",
+        lang ? "Вы получите подписку уровня 'Вода'" : "You will receive a subscription to the 'Water' level",
         "water",
         "", // Оставьте пустым для цифровых товаров
         "XTR", // Используйте валюту Telegram Stars
@@ -1439,7 +1438,7 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     if (callbackData.endsWith("copper_pipes")) {
       await ctx.replyWithInvoice(
         lang ? "🎺 Медные трубы" : "🎺 Copper pipes",
-        "Вы получить подписку уровня 'Медные трубы'",
+        lang ? "Вы получите подписку уровня 'Медные трубы'" : "You will receive a subscription to the 'Copper pipes' level",
         "copper_pipes",
         "", // Оставьте пустым для цифровых товаров
         "XTR", // Используйте валюту Telegram Stars
@@ -1449,26 +1448,21 @@ botAiKoshey.on("callback_query:data", async (ctx) => {
     }
   }
   if (callbackData === "select_russian") {
-    if (ctx.callbackQuery.from.id) {
-    console.log("editMessageReplyMarkup")
-    await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } }); 
-  }
     await setLanguage(ctx.from?.id.toString(), "ru");
-    await ctx.reply("Выбран русский");
+    await ctx.reply("🇷🇺 Выбран русский");
   }
   if (callbackData === "select_english") {
-    if (ctx.callbackQuery.from.id) {
-      console.log("editMessageReplyMarkup")
-      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } }); 
-    }
     await setLanguage(ctx.from?.id.toString(), "en");
-    await ctx.reply("English selected");
+    await ctx.reply("🇬🇧 English selected");
   }
 
   if (
     callbackData.startsWith("start_test") ||
     callbackData.startsWith("automation") ||
-    callbackData.startsWith("javascript") 
+    callbackData.startsWith("javascript") ||
+    callbackData.startsWith("python") ||
+    callbackData.startsWith("typescript") ||
+    callbackData.startsWith("reactnative")
   ) {
     if (callbackData === "start_test") {
       try {

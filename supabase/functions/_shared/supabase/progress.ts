@@ -253,7 +253,7 @@ export async function getCorrects(
   }
 }
 
-export async function getTop10Users(): Promise<any[]> {
+export async function getTop10Users(): Promise<{username: string, all: number}[]> {
   try {
     const { data: topUsers, error: topUsersError } = await supabase
       .from("progress")
